@@ -58,16 +58,15 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
   },
   stepsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
+    width: '100%',
     gap: 20,
   },
   stepCard: {
     alignItems: 'center',
-    width: 150,
+    width: '100%',
     backgroundColor: '#f8f9fa',
-    padding: 15,
+    padding: 25,
     borderRadius: 12,
   },
   stepIconWrapper: {
@@ -98,5 +97,6 @@ const styles = StyleSheet.create({
   stepDescription: {
     textAlign: 'center',
     color: '#6c757d',
+    fontSize: 15,
   },
 });
