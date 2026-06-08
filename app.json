@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "conectaPRO",
+    "slug": "conectaPRO",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logoc.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/fundo.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logoc.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.conectapro.app"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permita o conectaPRO acessar sua localização para encontrar profissionais próximos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita acessar suas fotos para alterar a foto de perfil."
+        }
+      ]
+    ]
+  }
+}
