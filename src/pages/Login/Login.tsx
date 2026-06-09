@@ -14,32 +14,36 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import Toast from 'react-native-toast-message';
-import { setToken, setUserType } from '../../services/auth';
+import { setToken, setUserType, setUserId } from '../../services/auth';
 import api from '../../services/api';
 
 interface LoginFormData {
   email: string;
-  senha: string;
+  password: string;
 }
 
 export default function Login() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
-    defaultValues: { email: '', senha: '' },
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const response = await api.post('/login', data);
-      const { token, tipo } = response.data;
+      const response = await api.post('/auth/login', {
+        email: data.email,
+        password: data.password,
+      });
+      const { token, userType, id } = response.data;
       await setToken(token);
-      await setUserType(tipo);
+      await setUserType(userType);
+      await setUserId(id.toString());
       Toast.show({ type: 'success', text1: 'Login realizado com sucesso!' });
-      if (tipo === 'CLIENTE') {
+      if (userType === 'CLIENT') {
         navigation.reset({ index: 0, routes: [{ name: 'DashboardCliente' }] });
-      } else if (tipo === 'PROFISSIONAL') {
+      } else if (userType === 'PROFESSIONAL') {
         navigation.reset({ index: 0, routes: [{ name: 'DashboardProfissional' }] });
       } else {
         navigation.goBack();
@@ -53,10 +57,7 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title}>Bem-vindo de volta</Text>
@@ -90,7 +91,7 @@ export default function Login() {
               rules={{ required: 'Senha obrigatória' }}
               render={({ field: { onChange, onBlur, value } }) => (
                 <TextInput
-                  style={[styles.input, errors.senha && styles.inputError]}
+                  style={[styles.input, errors.password && styles.inputError]}
                   placeholder="Sua senha"
                   secureTextEntry
                   onBlur={onBlur}
@@ -98,9 +99,9 @@ export default function Login() {
                   value={value}
                 />
               )}
-              name="senha"
+              name="password"
             />
-            {errors.senha && <Text style={styles.errorText}>{errors.senha.message}</Text>}
+            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
           </View>
 
           <TouchableOpacity
@@ -111,10 +112,6 @@ export default function Login() {
             <Text style={styles.btnSubmitText}>
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('EsqueceuSenha')}>
-            <Text style={styles.forgotPassword}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
           <View style={styles.loginFooter}>
@@ -146,27 +143,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#777',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  inputGroup: {
-    marginBottom: 22,
-  },
-  label: {
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#444',
-    fontSize: 14,
-  },
+  title: { fontSize: 26, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 15, color: '#777', textAlign: 'center', marginBottom: 30 },
+  inputGroup: { marginBottom: 22 },
+  label: { fontWeight: '600', marginBottom: 8, color: '#444', fontSize: 14 },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -175,14 +155,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fafafa',
   },
-  inputError: {
-    borderColor: '#dc3545',
-  },
-  errorText: {
-    color: '#dc3545',
-    marginTop: 4,
-    fontSize: 12,
-  },
+  inputError: { borderColor: '#dc3545' },
+  errorText: { color: '#dc3545', marginTop: 4, fontSize: 12 },
   btnSubmit: {
     backgroundColor: '#0066ff',
     paddingVertical: 15,
@@ -190,25 +164,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
     alignItems: 'center',
   },
-  btnSubmitText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-  },
-  forgotPassword: {
-    color: '#0066ff',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 14,
-  },
+  btnSubmitText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
   loginFooter: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 25,
     alignItems: 'center',
   },
-  link: {
-    color: '#0066ff',
-    fontWeight: 'bold',
-  },
+  link: { color: '#0066ff', fontWeight: 'bold' },
 });

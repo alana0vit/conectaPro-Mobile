@@ -33,6 +33,14 @@
         {
           "photosPermission": "Permita acessar suas fotos para alterar a foto de perfil."
         }
+      ],
+      [
+      "expo-build-properties",
+      {
+        "android": { 
+            "usesCleartextTraffic": true
+        }
+      }
       ]
     ]
   }
