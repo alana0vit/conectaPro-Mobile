@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,30 +6,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
+import { getUserId } from '../../services/auth';
 
 export default function DashboardProfissional() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('todos');
-  const [contagem, setContagem] = useState({ novos: 0, ativos: 0, total: 0 });
 
   const buscarPedidos = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/solicitacoes/profissional');
-      setPedidos(res.data);
-      setContagem({
-        novos: res.data.filter((p: any) => p.status === 'ABERTO').length,
-        ativos: res.data.filter((p: any) => p.status === 'AGUARDANDO').length,
-        total: res.data.length,
-      });
+      const userId = await getUserId();
+      const res = await api.get('/api/demand/user');
+      const minhas = res.data.filter((d: any) => d.professionalId?.id == userId);
+      setPedidos(minhas);
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Erro ao carregar demandas' });
     } finally {
@@ -43,7 +39,7 @@ export default function DashboardProfissional() {
 
   const atualizarStatus = async (pedidoId: number, novoStatus: string) => {
     try {
-      await api.put(`/solicitacoes/${pedidoId}/status`, { status: novoStatus });
+      await api.patch(`/api/demand/${pedidoId}/status`, { status: novoStatus });
       Toast.show({ type: 'success', text1: 'Status atualizado!' });
       buscarPedidos();
     } catch (error) {
@@ -51,10 +47,15 @@ export default function DashboardProfissional() {
     }
   };
 
-  const pedidosFiltrados = tab === 'todos' ? pedidos : pedidos.filter(p => p.status === tab.toUpperCase());
+  const pedidosFiltrados = tab === 'todos' ? pedidos : pedidos.filter(p => p.demandStatus === tab.toUpperCase());
 
   const traduzirStatus = (status: string) => {
-    const map: Record<string, string> = { ABERTO: 'Novo', AGUARDANDO: 'Em andamento', FINALIZADO: 'Finalizado', REJEITADO: 'Rejeitado' };
+    const map: Record<string, string> = {
+      ABERTO: 'Novo',
+      AGUARDANDO: 'Em andamento',
+      FECHADO: 'Finalizado',
+      REJEITADO: 'Rejeitado',
+    };
     return map[status] || status;
   };
 
@@ -66,28 +67,13 @@ export default function DashboardProfissional() {
             <Text style={styles.welcome}>Olá, Profissional</Text>
             <Text style={styles.subtitle}>Acompanhe suas demandas</Text>
           </View>
-          <TouchableOpacity style={styles.btnConfig} onPress={() => navigation.navigate('EditarPerfil' as never)}>
+          <TouchableOpacity style={styles.btnConfig} onPress={() => navigation.navigate('EditarPerfil')}>
             <FontAwesome5 name="cog" size={20} color="#007bff" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statsCards}>
-          <View style={[styles.statCard, styles.cardNew]}>
-            <Text style={styles.statNumber}>{contagem.novos}</Text>
-            <Text style={styles.statLabel}>Novas</Text>
-          </View>
-          <View style={[styles.statCard, styles.cardActive]}>
-            <Text style={styles.statNumber}>{contagem.ativos}</Text>
-            <Text style={styles.statLabel}>Em andamento</Text>
-          </View>
-          <View style={[styles.statCard, styles.cardTotal]}>
-            <Text style={styles.statNumber}>{contagem.total}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-        </View>
-
         <View style={styles.tabsContainer}>
-          {['todos', 'aberto', 'aguardando', 'finalizado'].map(t => (
+          {['todos', 'aberto', 'aguardando', 'fechado'].map(t => (
             <TouchableOpacity
               key={t}
               style={[styles.tabBtn, tab === t && styles.tabActive]}
@@ -116,12 +102,12 @@ export default function DashboardProfissional() {
             renderItem={({ item }) => (
               <View style={styles.requestCard}>
                 <View style={styles.cardBody}>
-                  <Text style={styles.badgeStatus}>{traduzirStatus(item.status)}</Text>
-                  <Text style={styles.clientName}>{item.cliente?.nome || 'Cliente'}</Text>
-                  <Text numberOfLines={2}>{item.descricao}</Text>
+                  <Text style={styles.badgeStatus}>{traduzirStatus(item.demandStatus)}</Text>
+                  <Text style={styles.clientName}>{item.clientId?.name || 'Cliente'}</Text>
+                  <Text numberOfLines={2}>{item.title}</Text>
                 </View>
                 <View style={styles.cardFooter}>
-                  {item.status === 'ABERTO' && (
+                  {item.demandStatus === 'ABERTO' && (
                     <>
                       <TouchableOpacity
                         style={[styles.btnAction, styles.btnAccept]}
@@ -137,10 +123,10 @@ export default function DashboardProfissional() {
                       </TouchableOpacity>
                     </>
                   )}
-                  {item.status === 'AGUARDANDO' && (
+                  {item.demandStatus === 'AGUARDANDO' && (
                     <TouchableOpacity
                       style={[styles.btnAction, styles.btnFinish]}
-                      onPress={() => atualizarStatus(item.id, 'FINALIZADO')}
+                      onPress={() => atualizarStatus(item.id, 'FECHADO')}
                     >
                       <Text style={styles.btnActionText}>Finalizar</Text>
                     </TouchableOpacity>
@@ -168,13 +154,6 @@ const styles = StyleSheet.create({
   welcome: { fontSize: 24, fontWeight: 'bold' },
   subtitle: { color: '#888' },
   btnConfig: { padding: 10 },
-  statsCards: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  statCard: { flex: 1, backgroundColor: '#fff', padding: 15, borderRadius: 10, borderLeftWidth: 4 },
-  cardNew: { borderLeftColor: '#3b82f6' },
-  cardActive: { borderLeftColor: '#f59e0b' },
-  cardTotal: { borderLeftColor: '#10b981' },
-  statNumber: { fontSize: 22, fontWeight: 'bold' },
-  statLabel: { color: '#888', fontSize: 13 },
   tabsContainer: { flexDirection: 'row', gap: 8, marginBottom: 15 },
   tabBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#e9ecef' },
   tabActive: { backgroundColor: '#3b82f6' },

@@ -135,7 +135,10 @@ export default function Cadastro() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.formContainer}>
+      <ScrollView
+        contentContainerStyle={styles.formContainer}
+        keyboardShouldPersistTaps="handled"
+      >
         <TouchableOpacity style={styles.btnVoltar} onPress={() => setStep('escolha')}>
           <Text style={styles.btnVoltarText}>← Voltar</Text>
         </TouchableOpacity>

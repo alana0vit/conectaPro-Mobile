@@ -59,7 +59,10 @@ export default function SolicServico() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.card}>
         <TouchableOpacity style={styles.btnVoltar} onPress={() => navigation.goBack()}>
           <Text style={styles.btnVoltarText}>← Voltar</Text>
