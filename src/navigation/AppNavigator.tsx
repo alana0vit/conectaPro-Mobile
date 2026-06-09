@@ -10,7 +10,6 @@ import DashboardProfissional from '../pages/DashboardProfissional/DashboardProfi
 import DetalhesSolicitacao from '../pages/DetalhesSolicitacao/DetalhesSolicitacao';
 import EditarDemanda from '../pages/EditarDemanda/EditarDemanda';
 import EditarPerfil from '../pages/EditarPerfil/EditarPerfil';
-import EsqueceuSenha from '../pages/EsqueceuSenha/EsqueceuSenha';
 import FaleConosco from '../pages/FaleConosco/FaleConosco';
 import FAQ from '../pages/FAQ/FAQ';
 import ListaProf from '../pages/ListaProf/ListaProf';
@@ -35,7 +34,6 @@ export default function AppNavigator() {
       <Stack.Screen name="DetalhesSolicitacao" component={DetalhesSolicitacao} />
       <Stack.Screen name="EditarDemanda" component={EditarDemanda} />
       <Stack.Screen name="EditarPerfil" component={EditarPerfil} />
-      <Stack.Screen name="EsqueceuSenha" component={EsqueceuSenha} />
       <Stack.Screen name="FaleConosco" component={FaleConosco} />
       <Stack.Screen name="FAQ" component={FAQ} />
       <Stack.Screen name="ListaProf" component={ListaProf} />
