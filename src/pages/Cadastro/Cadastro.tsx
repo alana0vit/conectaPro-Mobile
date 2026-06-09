@@ -17,7 +17,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { setToken, setUserType, setUserId } from '../../services/auth';
 
 interface CadastroFormData {
   tipo: string;
@@ -71,6 +70,7 @@ export default function Cadastro() {
       Toast.show({ type: 'error', text1: 'Aceite os termos de uso para continuar.' });
       return;
     }
+
     const payload: any = {
       name: data.nome,
       email: data.email,
@@ -89,21 +89,16 @@ export default function Cadastro() {
         supplement: data.complemento,
       },
     };
+
     if (data.tipo === 'PROFISSIONAL' && data.categoria) {
       payload.categoriesIds = [parseInt(data.categoria)];
     }
+
     try {
-      const response = await api.post('/api/user', payload);
-      const { token, userType, id } = response.data;
-      await setToken(token);
-      await setUserType(userType);
-      await setUserId(id.toString());
-      Toast.show({ type: 'success', text1: 'Cadastro realizado com sucesso!' });
-      if (userType === 'CLIENT') {
-        navigation.reset({ index: 0, routes: [{ name: 'DashboardCliente' }] });
-      } else if (userType === 'PROFESSIONAL') {
-        navigation.reset({ index: 0, routes: [{ name: 'DashboardProfissional' }] });
-      }
+      await api.post('/api/user', payload);
+      Toast.show({ type: 'success', text1: 'Cadastro realizado com sucesso! Faça login.' });
+      // Redireciona para a tela de Login
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     } catch (error: any) {
       const mensagem = error.response?.data?.message || 'Erro ao cadastrar';
       Toast.show({ type: 'error', text1: mensagem });
