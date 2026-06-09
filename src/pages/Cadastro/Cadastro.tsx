@@ -76,7 +76,7 @@ export default function Cadastro() {
       email: data.email,
       password: data.senha,
       birthDate: data.birthDate,
-      phone: data.telefone,
+      phone: data.telefone.replace(/\D/g, ''),
       userType: data.tipo === 'CLIENTE' ? 'CLIENT' : 'PROFESSIONAL',
       registryId: data.cpfCnpj.replace(/\D/g, ''),
       address: {
