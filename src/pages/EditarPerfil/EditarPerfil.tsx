@@ -11,7 +11,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { getUserId } from '../../services/auth';
+import { getUserId, getUserType } from '../../services/auth';
 
 interface EditarPerfilForm {
   name: string;
@@ -77,10 +77,12 @@ export default function EditarPerfil() {
   const onSubmit = async (data: EditarPerfilForm) => {
     try {
       const userId = await getUserId();
+      const userType = await getUserType();
       const payload: any = {
         name: data.name,
         email: data.email,
         phone: data.phone,
+        userType: userType,
         adresses: [{
           street: data.street,
           number: data.number,
