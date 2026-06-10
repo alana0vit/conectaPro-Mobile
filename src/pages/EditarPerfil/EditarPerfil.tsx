@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -29,9 +29,23 @@ interface EditarPerfilForm {
 
 export default function EditarPerfil() {
   const navigation = useNavigation();
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<EditarPerfilForm>();
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<EditarPerfilForm>({
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      street: '',
+      number: '',
+      supplement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: '',
+    },
+  });
+  const [carregado, setCarregado] = useState(false);
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     try {
       const userId = await getUserId();
       const res = await api.get(`/api/user/${userId}`);
@@ -51,10 +65,14 @@ export default function EditarPerfil() {
       });
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Erro ao carregar dados do perfil' });
+    } finally {
+      setCarregado(true);
     }
-  };
+  }, [reset]);
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
 
   const onSubmit = async (data: EditarPerfilForm) => {
     try {
@@ -86,10 +104,7 @@ export default function EditarPerfil() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.page}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScrollView contentContainerStyle={styles.page}>
       <View style={styles.wrapper}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.voltar}>← Voltar</Text>
@@ -97,78 +112,84 @@ export default function EditarPerfil() {
         <View style={styles.card}>
           <Text style={styles.title}>Editar Perfil</Text>
 
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Dados Pessoais</Text>
-            <View style={styles.formGrid}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nome</Text>
-                <Controller control={control} rules={{ required: true }} render={({ field }) => <TextInput style={styles.input} {...field} />} name="name" />
+          {!carregado ? (
+            <Text style={{ textAlign: 'center', marginTop: 20 }}>Carregando...</Text>
+          ) : (
+            <>
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Dados Pessoais</Text>
+                <View style={styles.formGrid}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Nome</Text>
+                    <Controller control={control} rules={{ required: true }} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} />} name="name" />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>E-mail</Text>
+                    <Controller control={control} rules={{ required: true }} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} keyboardType="email-address" />} name="email" />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Telefone</Text>
+                    <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} />} name="phone" />
+                  </View>
+                </View>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>E-mail</Text>
-                <Controller control={control} rules={{ required: true }} render={({ field }) => <TextInput style={styles.input} {...field} keyboardType="email-address" />} name="email" />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Telefone</Text>
-                <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} />} name="phone" />
-              </View>
-            </View>
-          </View>
 
-          <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Endereço</Text>
-            <View style={styles.formGrid}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>CEP</Text>
-                <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} keyboardType="numeric" />} name="zipCode" />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Logradouro</Text>
-                <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} />} name="street" />
-              </View>
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Número</Text>
-                  <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} keyboardType="numeric" />} name="number" />
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Endereço</Text>
+                <View style={styles.formGrid}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>CEP</Text>
+                    <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} keyboardType="numeric" />} name="zipCode" />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Logradouro</Text>
+                    <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} />} name="street" />
+                  </View>
+                  <View style={styles.row}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Número</Text>
+                      <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} keyboardType="numeric" />} name="number" />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Complemento</Text>
+                      <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} />} name="supplement" />
+                    </View>
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Bairro</Text>
+                    <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} />} name="neighborhood" />
+                  </View>
+                  <View style={styles.row}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Cidade</Text>
+                      <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} />} name="city" />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Estado</Text>
+                      <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} maxLength={2} />} name="state" />
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Complemento</Text>
-                  <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} />} name="supplement" />
-                </View>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Bairro</Text>
-                <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} />} name="neighborhood" />
-              </View>
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Cidade</Text>
-                  <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} />} name="city" />
-                </View>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Estado</Text>
-                  <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} maxLength={2} />} name="state" />
-                </View>
-              </View>
-            </View>
-          </View>
 
-          <View style={styles.formSection}>
-            <Text style={[styles.sectionTitle, { color: '#b91c1c' }]}>Alterar Senha (opcional)</Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nova Senha</Text>
-              <Controller control={control} render={({ field }) => <TextInput style={styles.input} {...field} secureTextEntry />} name="password" />
-            </View>
-          </View>
+              <View style={styles.formSection}>
+                <Text style={[styles.sectionTitle, { color: '#b91c1c' }]}>Alterar Senha (opcional)</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Nova Senha</Text>
+                  <Controller control={control} render={({ field: { onChange, value } }) => <TextInput style={styles.input} onChangeText={onChange} value={value} secureTextEntry />} name="password" />
+                </View>
+              </View>
 
-          <View style={styles.formActions}>
-            <TouchableOpacity style={styles.btnCancel} onPress={() => navigation.goBack()}>
-              <Text style={{ color: '#666' }}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnSubmit} onPress={handleSubmit(onSubmit)}>
-              <Text style={styles.btnSubmitText}>Salvar Alterações</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.formActions}>
+                <TouchableOpacity style={styles.btnCancel} onPress={() => navigation.goBack()}>
+                  <Text style={{ color: '#666' }}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnSubmit} onPress={handleSubmit(onSubmit)}>
+                  <Text style={styles.btnSubmitText}>Salvar Alterações</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
     </ScrollView>
