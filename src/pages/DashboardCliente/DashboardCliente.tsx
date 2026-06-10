@@ -20,23 +20,32 @@ export default function DashboardCliente() {
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [tabAtiva, setTabAtiva] = useState('todos');
+  const [abaAtiva, setAbaAtiva] = useState('ATIVAS');
+  const [cardSelecionado, setCardSelecionado] = useState('ANDAMENTO');
   const [userName, setUserName] = useState('');
 
-  // Estados para modal de avaliação
-  const [modalVisible, setModalVisible] = useState(false);
-  const [demandaSelecionada, setDemandaSelecionada] = useState<any>(null);
-  const [ratingPoints, setRatingPoints] = useState(0);
-  const [ratingDescription, setRatingDescription] = useState('');
-  const [ratingAnonymous, setRatingAnonymous] = useState(false);
+  // Modal de detalhes
+  const [pedidoDetalhado, setPedidoDetalhado] = useState<any>(null);
+
+  // Modal de avaliação
+  const [pedidoParaAvaliar, setPedidoParaAvaliar] = useState<any>(null);
+  const [estrelas, setEstrelas] = useState(5);
+  const [comentario, setComentario] = useState('');
+  const [anonimo, setAnonimo] = useState(false);
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
+  const [demandasAvaliadas, setDemandasAvaliadas] = useState<number[]>([]);
 
   const buscarPedidos = async () => {
     setLoading(true);
     try {
       const userId = await getUserId();
       const res = await api.get('/api/demand/user');
-      const minhas = res.data.filter((d: any) => d.clientId?.id == userId);
+      const minhas = res.data
+        .filter((d: any) => {
+          const idCli = d.clientId?.id || d.clientId;
+          return Number(idCli) === Number(userId);
+        })
+        .sort((a: any, b: any) => (b.id || 0) - (a.id || 0));
       setPedidos(minhas);
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Erro ao carregar solicitações' });
@@ -58,46 +67,63 @@ export default function DashboardCliente() {
     }, [])
   );
 
-  const pedidosFiltrados = tabAtiva === 'todos'
-    ? pedidos.filter(p => p.title?.toLowerCase().includes(search.toLowerCase()))
-    : pedidos.filter(p => p.demandStatus === tabAtiva.toUpperCase() && p.title?.toLowerCase().includes(search.toLowerCase()));
+  const pedidosFiltrados = pedidos.filter(p => {
+    const status = String(p.demandStatus || '').toUpperCase();
+    const matchesTexto = p.title?.toLowerCase().includes(search.toLowerCase());
+    if (!matchesTexto) return false;
+    if (abaAtiva === 'ATIVAS') {
+      return status === 'ABERTO' || status === 'AGUARDANDO';
+    }
+    if (abaAtiva === 'HISTORICO') {
+      return status === 'FECHADO' || status === 'REJEITADO';
+    }
+    return true;
+  });
+
+  const emAndamento = pedidos.filter(p => String(p.demandStatus).toUpperCase() === 'AGUARDANDO').length;
+  const aguardando = pedidos.filter(p => String(p.demandStatus).toUpperCase() === 'ABERTO').length;
+  const concluidos = pedidos.filter(p => String(p.demandStatus).toUpperCase() === 'FECHADO').length;
 
   const traduzirStatus = (status: string) => {
-    const map: Record<string, string> = {
-      ABERTO: 'Aberto',
-      AGUARDANDO: 'Aguardando',
-      FECHADO: 'Finalizado',
-      REJEITADO: 'Rejeitado',
-    };
-    return map[status] || status;
+    const s = String(status).toUpperCase();
+    if (s === 'ABERTO') return 'Aguardando Resposta';
+    if (s === 'AGUARDANDO') return 'Em Andamento';
+    if (s === 'FECHADO') return 'Concluída';
+    if (s === 'REJEITADO') return 'Recusada';
+    return s;
   };
 
-  const abrirModalAvaliacao = (demanda: any) => {
-    setDemandaSelecionada(demanda);
-    setRatingPoints(0);
-    setRatingDescription('');
-    setRatingAnonymous(false);
-    setModalVisible(true);
-  };
-
+  // Fluxo correto: POST /api/rating → PUT /api/rating/{id}
   const enviarAvaliacao = async () => {
-    if (ratingPoints === 0) {
-      Toast.show({ type: 'error', text1: 'Selecione uma pontuação' });
+    if (!pedidoParaAvaliar) return;
+    const professionalId = pedidoParaAvaliar.professionalId?.id || pedidoParaAvaliar.professionalId;
+    if (!professionalId) {
+      Toast.show({ type: 'error', text1: 'Profissional não identificado' });
       return;
     }
     setEnviandoAvaliacao(true);
     try {
       const userId = await getUserId();
-      await api.post('/api/rating', {
-        service: demandaSelecionada.id,
-        evaluatingPerson: parseInt(userId!),
-        personEvaluated: demandaSelecionada.professionalId.id,
-        points: ratingPoints,
-        description: ratingDescription,
-        anonymous: ratingAnonymous,
+      // Etapa 1: criar avaliação pendente
+      const resRating = await api.post('/api/rating', {
+        service: Number(pedidoParaAvaliar.id),
+        evaluatingPerson: Number(userId),
+        personEvaluated: Number(professionalId),
       });
-      Toast.show({ type: 'success', text1: 'Avaliação enviada!' });
-      setModalVisible(false);
+      const ratingId = resRating.data.id;
+      // Etapa 2: finalizar avaliação
+      await api.put(`/api/rating/${ratingId}`, {
+        approved: true,
+        points: Number(estrelas),
+        description: comentario.trim(),
+        anonymous: Boolean(anonimo),
+      });
+      setDemandasAvaliadas(prev => [...prev, Number(pedidoParaAvaliar.id)]);
+      Toast.show({ type: 'success', text1: 'Avaliação enviada com sucesso!' });
+      setPedidoParaAvaliar(null);
+      setComentario('');
+      setEstrelas(5);
+      setAnonimo(false);
       buscarPedidos();
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Erro ao enviar avaliação';
@@ -109,41 +135,78 @@ export default function DashboardCliente() {
 
   return (
     <View style={styles.wrapper}>
+      {/* Banner */}
       <View style={styles.banner}>
-        <View>
-          <Text style={styles.welcome}>Bem-vindo(a),</Text>
-          <Text style={styles.name}>{userName || 'Cliente'}</Text>
+        <View style={styles.bannerTextContainer}>
+          <Text style={styles.welcome}>Olá, <Text style={styles.name}>{userName || 'Cliente'}</Text></Text>
+          <Text style={styles.sub}>Acompanhe cada etapa com segurança e transparência.</Text>
         </View>
         <TouchableOpacity style={styles.btnEdit} onPress={() => navigation.navigate('EditarPerfil')}>
+          <FontAwesome5 name="user-edit" size={14} color="#0066ff" />
           <Text style={styles.btnEditText}>Editar Perfil</Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.btnNewSolic} onPress={() => navigation.navigate('ListaProf')}>
-        <Text style={styles.btnNewSolicText}>+ Nova Solicitação</Text>
+        <FontAwesome5 name="plus-circle" size={18} color="#fff" />
+        <Text style={styles.btnNewSolicText}>Solicitar Novo Serviço</Text>
       </TouchableOpacity>
 
+      {/* Cards de status */}
+      <View style={styles.statusCards}>
+        <TouchableOpacity
+          style={[styles.statusCard, abaAtiva === 'ATIVAS' && cardSelecionado === 'ANDAMENTO' && styles.statusCardActive]}
+          onPress={() => { setAbaAtiva('ATIVAS'); setCardSelecionado('ANDAMENTO'); }}
+        >
+          <Text style={styles.statusNumber}>{emAndamento}</Text>
+          <Text style={styles.statusLabel}>Em Andamento</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.statusCard, abaAtiva === 'ATIVAS' && cardSelecionado === 'AGUARDANDO' && styles.statusCardActive]}
+          onPress={() => { setAbaAtiva('ATIVAS'); setCardSelecionado('AGUARDANDO'); }}
+        >
+          <Text style={styles.statusNumber}>{aguardando}</Text>
+          <Text style={styles.statusLabel}>Aguardando</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.statusCard, abaAtiva === 'HISTORICO' && styles.statusCardActive]}
+          onPress={() => { setAbaAtiva('HISTORICO'); setCardSelecionado('FINALIZADOS'); }}
+        >
+          <Text style={styles.statusNumber}>{concluidos}</Text>
+          <Text style={styles.statusLabel}>Finalizados</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Lista */}
       <View style={styles.board}>
-        <Text style={styles.boardTitle}>Minhas Solicitações</Text>
-        <View style={styles.searchRow}>
-          <TextInput style={styles.searchInput} placeholder="Buscar..." value={search} onChangeText={setSearch} />
-          <TouchableOpacity onPress={buscarPedidos}>
-            <FontAwesome5 name="sync-alt" size={18} color="#007bff" />
-          </TouchableOpacity>
+        <View style={styles.boardHeader}>
+          <Text style={styles.boardTitle}>Listagem de Pedidos</Text>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Filtrar por título..."
+              value={search}
+              onChangeText={setSearch}
+            />
+            <TouchableOpacity onPress={buscarPedidos}>
+              <FontAwesome5 name="sync-alt" size={16} color="#007bff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.tabs}>
-          {['todos', 'aberto', 'aguardando', 'fechado'].map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, tabAtiva === tab && styles.tabActive]}
-              onPress={() => setTabAtiva(tab)}
-            >
-              <Text style={tabAtiva === tab ? styles.tabTextActive : styles.tabText}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={[styles.tab, abaAtiva === 'ATIVAS' && styles.tabActive]}
+            onPress={() => setAbaAtiva('ATIVAS')}
+          >
+            <Text style={abaAtiva === 'ATIVAS' ? styles.tabTextActive : styles.tabText}>Chamados Ativos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, abaAtiva === 'HISTORICO' && styles.tabActive]}
+            onPress={() => setAbaAtiva('HISTORICO')}
+          >
+            <Text style={abaAtiva === 'HISTORICO' ? styles.tabTextActive : styles.tabText}>Histórico</Text>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -152,141 +215,269 @@ export default function DashboardCliente() {
           <FlatList
             data={pedidosFiltrados}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.orderRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.orderTitle}>{item.title}</Text>
-                  <Text style={styles.orderMeta}>{item.description?.substring(0, 60)}...</Text>
-                  {item.demandStatus === 'FECHADO' && (
-                    <TouchableOpacity
-                      style={styles.btnAvaliar}
-                      onPress={() => abrirModalAvaliacao(item)}
-                    >
-                      <Text style={styles.btnAvaliarText}>Avaliar</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <View style={[styles.pill, item.demandStatus === 'ABERTO' && styles.pillAberto, item.demandStatus === 'FECHADO' && styles.pillFinalizado]}>
-                  <Text style={styles.pillText}>{traduzirStatus(item.demandStatus)}</Text>
-                </View>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const status = String(item.demandStatus).toUpperCase();
+              const jaAvaliado = demandasAvaliadas.includes(Number(item.id));
+              return (
+                <TouchableOpacity
+                  style={styles.orderRow}
+                  onPress={() => setPedidoDetalhado(item)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.rowTop}>
+                      <Text style={styles.orderTitle} numberOfLines={1}>{item.title}</Text>
+                      <View style={[
+                        styles.pill,
+                        status === 'ABERTO' && styles.pillAberto,
+                        status === 'AGUARDANDO' && styles.pillAguardando,
+                        status === 'FECHADO' && styles.pillFechado,
+                        status === 'REJEITADO' && styles.pillRejeitado,
+                      ]}>
+                        <Text style={styles.pillText}>{traduzirStatus(item.demandStatus)}</Text>
+                      </View>
+                    </View>
+                    {item.professionalId?.name && (
+                      <Text style={styles.orderMeta}>
+                        <FontAwesome5 name="user" size={12} color="#666" /> {item.professionalId.name}
+                      </Text>
+                    )}
+                    <Text style={styles.orderDesc} numberOfLines={2}>{item.description}</Text>
+                    <View style={styles.rowFooter}>
+                      <Text style={styles.viewMore}>Ver mais detalhes</Text>
+                      {(status === 'FECHADO') && (
+                        jaAvaliado ? (
+                          <Text style={styles.badgeAvaliado}>✓ Avaliado</Text>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.btnAvaliar}
+                            onPress={() => setPedidoParaAvaliar(item)}
+                          >
+                            <FontAwesome5 name="star" size={12} color="#f59f00" />
+                            <Text style={styles.btnAvaliarText}>Avaliar</Text>
+                          </TouchableOpacity>
+                        )
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
           />
         )}
       </View>
 
-      {/* Modal de avaliação */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Avaliar Serviço</Text>
-
-            {/* Seleção de estrelas */}
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map(star => (
-                <TouchableOpacity key={star} onPress={() => setRatingPoints(star)}>
-                  <FontAwesome5
-                    name="star"
-                    size={32}
-                    color={star <= ratingPoints ? '#f59f00' : '#ced4da'}
-                    solid={star <= ratingPoints}
-                  />
+      {/* Modal de detalhes */}
+      {pedidoDetalhado && (
+        <Modal visible transparent animationType="fade">
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPedidoDetalhado(null)}>
+            <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Detalhes da Solicitação</Text>
+                <TouchableOpacity onPress={() => setPedidoDetalhado(null)}>
+                  <FontAwesome5 name="times" size={20} color="#666" />
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.ratingQualifier}>
-              {ratingPoints === 0 ? 'Toque para avaliar' :
-                ratingPoints <= 2 ? 'Ruim' :
-                  ratingPoints === 3 ? 'Regular' :
-                    ratingPoints === 4 ? 'Bom' : 'Excelente'}
-            </Text>
-
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Descreva sua experiência (opcional)"
-              multiline
-              value={ratingDescription}
-              onChangeText={setRatingDescription}
-            />
-
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() => setRatingAnonymous(!ratingAnonymous)}
-            >
-              <View style={[styles.checkbox, ratingAnonymous && styles.checkboxChecked]}>
-                {ratingAnonymous && <Text style={{ color: '#fff' }}>✓</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>Avaliar anonimamente</Text>
-            </TouchableOpacity>
+              <View style={styles.modalBody}>
+                <Text style={styles.detailLabel}>Título</Text>
+                <Text style={styles.detailValue}>{pedidoDetalhado.title}</Text>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.btnCancel}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={{ color: '#666' }}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btnSubmit, enviandoAvaliacao && { opacity: 0.7 }]}
-                onPress={enviarAvaliacao}
-                disabled={enviandoAvaliacao}
-              >
-                <Text style={styles.btnSubmitText}>
-                  {enviandoAvaliacao ? 'Enviando...' : 'Enviar Avaliação'}
-                </Text>
-              </TouchableOpacity>
+                <Text style={styles.detailLabel}>Status</Text>
+                <Text style={styles.detailValue}>{traduzirStatus(pedidoDetalhado.demandStatus)}</Text>
+
+                {pedidoDetalhado.professionalId?.name && (
+                  <>
+                    <Text style={styles.detailLabel}>Profissional</Text>
+                    <Text style={styles.detailValue}>
+                      {pedidoDetalhado.professionalId.name} - {pedidoDetalhado.professionalId.phone || 'Sem telefone'}
+                    </Text>
+                  </>
+                )}
+
+                <Text style={styles.detailLabel}>Descrição</Text>
+                <Text style={styles.detailDesc}>{pedidoDetalhado.description}</Text>
+
+                {/* Ações contextuais */}
+                {String(pedidoDetalhado.demandStatus).toUpperCase() === 'ABERTO' && (
+                  <TouchableOpacity
+                    style={styles.btnModalPrimary}
+                    onPress={() => {
+                      setPedidoDetalhado(null);
+                      navigation.navigate('EditarDemanda', { id: pedidoDetalhado.id });
+                    }}
+                  >
+                    <Text style={styles.btnModalText}>Editar Esta Solicitação</Text>
+                  </TouchableOpacity>
+                )}
+                {String(pedidoDetalhado.demandStatus).toUpperCase() === 'REJEITADO' && (
+                  <TouchableOpacity
+                    style={styles.btnModalSuccess}
+                    onPress={() => {
+                      setPedidoDetalhado(null);
+                      navigation.navigate('ListaProf', { reassignDemandId: pedidoDetalhado.id });
+                    }}
+                  >
+                    <Text style={styles.btnModalText}>Solicitar a Outro Profissional</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+      {/* Modal de avaliação */}
+      {pedidoParaAvaliar && (
+        <Modal visible transparent animationType="slide">
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPedidoParaAvaliar(null)}>
+            <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Avaliar Prestador</Text>
+                <TouchableOpacity onPress={() => setPedidoParaAvaliar(null)}>
+                  <FontAwesome5 name="times" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.modalBody}>
+                <Text style={styles.detailLabel}>SUA NOTA</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map(num => (
+                    <TouchableOpacity key={num} onPress={() => setEstrelas(num)}>
+                      <FontAwesome5
+                        name="star"
+                        size={30}
+                        solid={num <= estrelas}
+                        color={num <= estrelas ? '#f59f00' : '#ced4da'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={styles.ratingQualifier}>
+                  {estrelas === 5 ? 'Excelente!' : estrelas === 4 ? 'Muito Bom' : estrelas === 3 ? 'Regular' : estrelas === 2 ? 'Ruim' : 'Muito Ruim'}
+                </Text>
+
+                <Text style={styles.detailLabel}>COMENTÁRIO</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  multiline
+                  placeholder="Deixe seu feedback..."
+                  value={comentario}
+                  onChangeText={setComentario}
+                />
+
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => setAnonimo(!anonimo)}
+                >
+                  <View style={[styles.checkbox, anonimo && styles.checkboxChecked]}>
+                    {anonimo && <Text style={{ color: '#fff' }}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Enviar anonimamente</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.btnSubmit, enviandoAvaliacao && { opacity: 0.7 }]}
+                  onPress={enviarAvaliacao}
+                  disabled={enviandoAvaliacao}
+                >
+                  <Text style={styles.btnSubmitText}>
+                    {enviandoAvaliacao ? 'Enviando...' : 'Submeter Avaliação'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 }
 
-// Estilos (adicionados os novos elementos)
 const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: '#f4f6f9' },
-  banner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 20, margin: 15, borderRadius: 12 },
-  welcome: { fontSize: 16, color: '#555' },
-  name: { fontSize: 22, fontWeight: 'bold' },
-  btnEdit: { backgroundColor: '#e9ecef', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8 },
-  btnEditText: { color: '#333' },
-  btnNewSolic: { backgroundColor: '#0066ff', marginHorizontal: 15, padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
-  btnNewSolicText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  board: { flex: 1, backgroundColor: '#fff', margin: 15, borderRadius: 12, padding: 15 },
-  boardTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 8 },
-  tabs: { flexDirection: 'row', gap: 8, marginBottom: 15 },
-  tab: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#f1f3f5' },
-  tabActive: { backgroundColor: '#0066ff' },
-  tabText: { color: '#555' },
-  tabTextActive: { color: '#fff', fontWeight: 'bold' },
-  orderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  orderTitle: { fontWeight: '600' },
-  orderMeta: { color: '#888', fontSize: 13 },
-  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: '#e9ecef' },
+  banner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+    margin: 15,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flexWrap: 'wrap',        // Marian, isso aqui permite quebrar se não couber
+    gap: 10,
+  },
+  bannerTextContainer: {
+    flex: 1,
+    minWidth: 150,            // E aqui garante que o texto tenha um mínimo, blz?
+  },
+  welcome: { fontSize: 18, color: '#1a202c' },
+  name: { fontWeight: '800', color: '#0066ff' },
+  sub: { fontSize: 13, color: '#718096', marginTop: 4 },
+  btnEdit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#cbd5e0',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 50,
+  },
+  btnEditText: { fontSize: 13, color: '#4a5568', fontWeight: '600' },
+  btnNewSolic: { flexDirection: 'row', backgroundColor: '#0066ff', marginHorizontal: 15, padding: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 15, elevation: 3 },
+  btnNewSolicText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  statusCards: { flexDirection: 'row', paddingHorizontal: 15, gap: 10, marginBottom: 15 },
+  statusCard: { flex: 1, backgroundColor: '#fff', padding: 15, borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
+  statusCardActive: { borderColor: '#0066ff', backgroundColor: '#fafdff' },
+  statusNumber: { fontSize: 24, fontWeight: '800', color: '#1a202c' },
+  statusLabel: { fontSize: 12, color: '#718096', marginTop: 4 },
+  board: { flex: 1, backgroundColor: '#fff', margin: 15, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#e2e8f0' },
+  boardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, flexWrap: 'wrap', gap: 10 },
+  boardTitle: { fontSize: 18, fontWeight: '700', color: '#1a202c' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchInput: { borderWidth: 1, borderColor: '#cbd5e0', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 8, width: 180, fontSize: 13 },
+  tabs: { flexDirection: 'row', gap: 12, marginBottom: 15, borderBottomWidth: 2, borderBottomColor: '#edf2f7', paddingBottom: 8 },
+  tab: { paddingVertical: 8 },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#0066ff', marginBottom: -10 },
+  tabText: { fontSize: 14, color: '#718096', fontWeight: '600' },
+  tabTextActive: { color: '#0066ff', fontWeight: '700' },
+  orderRow: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 4 },
+  orderTitle: { fontSize: 15, fontWeight: '700', color: '#1a202c', flex: 1 },
+  pill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 50 },
   pillAberto: { backgroundColor: '#e6f0ff' },
-  pillFinalizado: { backgroundColor: '#ebfbee' },
-  pillText: { fontSize: 12, fontWeight: 'bold' },
-  btnAvaliar: { marginTop: 8, backgroundColor: '#f59f00', paddingHorizontal: 15, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start' },
-  btnAvaliarText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-
+  pillAguardando: { backgroundColor: '#fff9db' },
+  pillFechado: { backgroundColor: '#ebfbee' },
+  pillRejeitado: { backgroundColor: '#fff5f5' },
+  pillText: { fontSize: 11, fontWeight: '600', color: '#333' },
+  orderMeta: { fontSize: 12, color: '#4a5568', marginTop: 2 },
+  orderDesc: { fontSize: 13, color: '#4a5568', lineHeight: 18, marginTop: 4 },
+  rowFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: '#f7fafc', paddingTop: 10 },
+  viewMore: { fontSize: 12, color: '#0066ff', fontWeight: '600' },
+  badgeAvaliado: { fontSize: 12, color: '#2b8a3e', fontWeight: '700' },
+  btnAvaliar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff9db', borderWidth: 1, borderColor: '#ffe3e3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50, gap: 4 },
+  btnAvaliarText: { fontSize: 12, color: '#f59f00', fontWeight: '700' },
   // Modal styles
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
-  starsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 10 },
-  ratingQualifier: { textAlign: 'center', color: '#888', marginBottom: 15 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fafafa' },
-  textArea: { height: 100, textAlignVertical: 'top', marginBottom: 15 },
-  checkboxRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  checkbox: { width: 22, height: 22, borderWidth: 2, borderColor: '#007bff', borderRadius: 4, marginRight: 10, alignItems: 'center', justifyContent: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(26,32,44,0.4)', justifyContent: 'center', padding: 20 },
+  modalSheet: { backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#edf2f7' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1a202c' },
+  modalBody: { padding: 20 },
+  detailLabel: { fontSize: 11, fontWeight: '700', color: '#a0aec0', textTransform: 'uppercase', marginBottom: 4, marginTop: 12 },
+  detailValue: { fontSize: 14, color: '#2d3748' },
+  detailDesc: { fontSize: 14, color: '#2d3748', backgroundColor: '#f7fafc', padding: 12, borderRadius: 10, lineHeight: 20, borderWidth: 1, borderColor: '#e2e8f0' },
+  btnModalPrimary: { backgroundColor: '#0066ff', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 20 },
+  btnModalSuccess: { backgroundColor: '#2b8a3e', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 20 },
+  btnModalText: { color: '#fff', fontWeight: '600' },
+  starsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginVertical: 10 },
+  ratingQualifier: { textAlign: 'center', color: '#2d3748', fontWeight: '700', marginBottom: 10 },
+  input: { borderWidth: 1, borderColor: '#cbd5e0', borderRadius: 8, padding: 12, fontSize: 14 },
+  textArea: { height: 80, textAlignVertical: 'top' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
+  checkbox: { width: 20, height: 20, borderWidth: 2, borderColor: '#007bff', borderRadius: 4, marginRight: 10, alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: '#007bff' },
-  checkboxLabel: { fontSize: 14, color: '#555' },
-  modalActions: { flexDirection: 'row', justifyContent: 'space-between' },
-  btnCancel: { paddingVertical: 12, paddingHorizontal: 25, borderWidth: 1, borderColor: '#ccc', borderRadius: 8 },
-  btnSubmit: { backgroundColor: '#0066ff', paddingVertical: 12, paddingHorizontal: 25, borderRadius: 8 },
-  btnSubmitText: { color: '#fff', fontWeight: 'bold' },
+  checkboxLabel: { fontSize: 13, color: '#4a5568' },
+  btnSubmit: { backgroundColor: '#f59f00', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  btnSubmitText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
