@@ -13,7 +13,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { getUserId } from '../../services/auth';
+import { getUserId, getUserType } from '../../services/auth';
+import Header from '../../components/Header';
 
 export default function DashboardCliente() {
   const navigation = useNavigation<any>();
@@ -23,6 +24,7 @@ export default function DashboardCliente() {
   const [abaAtiva, setAbaAtiva] = useState('ATIVAS');
   const [cardSelecionado, setCardSelecionado] = useState('ANDAMENTO');
   const [userName, setUserName] = useState('');
+  const [userType, setUserType] = useState<string | null>(null);
 
   // Modal de detalhes
   const [pedidoDetalhado, setPedidoDetalhado] = useState<any>(null);
@@ -33,7 +35,9 @@ export default function DashboardCliente() {
   const [comentario, setComentario] = useState('');
   const [anonimo, setAnonimo] = useState(false);
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
-  const [demandasAvaliadas, setDemandasAvaliadas] = useState<number[]>([]);
+
+  // Mapa de avaliações: { [demandId]: pontuacao }
+  const [avaliacoes, setAvaliacoes] = useState<Record<number, number>>({});
 
   const buscarPedidos = async () => {
     setLoading(true);
@@ -54,12 +58,32 @@ export default function DashboardCliente() {
     }
   };
 
+  const buscarAvaliacoes = async () => {
+    try {
+      const userId = await getUserId();
+      const res = await api.get(`/api/rating/user/${userId}/evaluator`);
+      const ratings = Array.isArray(res.data) ? res.data : [];
+      const mapa: Record<number, number> = {};
+      ratings.forEach((r: any) => {
+        if (r.service && r.service.id && r.points != null) {
+          mapa[r.service.id] = r.points;
+        }
+      });
+      setAvaliacoes(mapa);
+    } catch (error) {
+      console.error('Erro ao carregar avaliações:', error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       buscarPedidos();
+      buscarAvaliacoes();
       (async () => {
         try {
           const userId = await getUserId();
+          const tipo = await getUserType();
+          setUserType(tipo);
           const res = await api.get(`/api/user/${userId}`);
           setUserName(res.data.name);
         } catch (e) { }
@@ -93,7 +117,6 @@ export default function DashboardCliente() {
     return s;
   };
 
-  // Fluxo correto: POST /api/rating → PUT /api/rating/{id}
   const enviarAvaliacao = async () => {
     if (!pedidoParaAvaliar) return;
     const professionalId = pedidoParaAvaliar.professionalId?.id || pedidoParaAvaliar.professionalId;
@@ -104,27 +127,27 @@ export default function DashboardCliente() {
     setEnviandoAvaliacao(true);
     try {
       const userId = await getUserId();
-      // Etapa 1: criar avaliação pendente
       const resRating = await api.post('/api/rating', {
         service: Number(pedidoParaAvaliar.id),
         evaluatingPerson: Number(userId),
         personEvaluated: Number(professionalId),
       });
       const ratingId = resRating.data.id;
-      // Etapa 2: finalizar avaliação
       await api.put(`/api/rating/${ratingId}`, {
         approved: true,
         points: Number(estrelas),
         description: comentario.trim(),
         anonymous: Boolean(anonimo),
       });
-      setDemandasAvaliadas(prev => [...prev, Number(pedidoParaAvaliar.id)]);
+
+      // Atualiza o mapa local com a pontuação
+      setAvaliacoes(prev => ({ ...prev, [pedidoParaAvaliar.id]: Number(estrelas) }));
+
       Toast.show({ type: 'success', text1: 'Avaliação enviada com sucesso!' });
       setPedidoParaAvaliar(null);
       setComentario('');
       setEstrelas(5);
       setAnonimo(false);
-      buscarPedidos();
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Erro ao enviar avaliação';
       Toast.show({ type: 'error', text1: msg });
@@ -133,8 +156,28 @@ export default function DashboardCliente() {
     }
   };
 
+  // Renderiza as estrelas baseado na nota (1-5)
+  const renderStars = (nota: number) => {
+    return (
+      <View style={styles.starsRow}>
+        {[1, 2, 3, 4, 5].map(star => (
+          <FontAwesome5
+            key={star}
+            name="star"
+            size={12}
+            solid={star <= nota}
+            color={star <= nota ? '#f59f00' : '#ced4da'}
+          />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.wrapper}>
+      {/* Header com informações do usuário logado */}
+      <Header user={userName ? { nome: userName, tipo: userType || undefined } : null} />
+
       {/* Banner */}
       <View style={styles.banner}>
         <View style={styles.bannerTextContainer}>
@@ -152,7 +195,7 @@ export default function DashboardCliente() {
         <Text style={styles.btnNewSolicText}>Solicitar Novo Serviço</Text>
       </TouchableOpacity>
 
-      {/* Cards de status */}
+      {/* Status cards */}
       <View style={styles.statusCards}>
         <TouchableOpacity
           style={[styles.statusCard, abaAtiva === 'ATIVAS' && cardSelecionado === 'ANDAMENTO' && styles.statusCardActive]}
@@ -188,7 +231,7 @@ export default function DashboardCliente() {
               value={search}
               onChangeText={setSearch}
             />
-            <TouchableOpacity onPress={buscarPedidos}>
+            <TouchableOpacity onPress={() => { buscarPedidos(); buscarAvaliacoes(); }}>
               <FontAwesome5 name="sync-alt" size={16} color="#007bff" />
             </TouchableOpacity>
           </View>
@@ -217,7 +260,8 @@ export default function DashboardCliente() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => {
               const status = String(item.demandStatus).toUpperCase();
-              const jaAvaliado = demandasAvaliadas.includes(Number(item.id));
+              const notaAvaliacao = avaliacoes[item.id]; // undefined ou número
+
               return (
                 <TouchableOpacity
                   style={styles.orderRow}
@@ -245,8 +289,11 @@ export default function DashboardCliente() {
                     <View style={styles.rowFooter}>
                       <Text style={styles.viewMore}>Ver mais detalhes</Text>
                       {(status === 'FECHADO') && (
-                        jaAvaliado ? (
-                          <Text style={styles.badgeAvaliado}>✓ Avaliado</Text>
+                        notaAvaliacao != null ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                            {renderStars(notaAvaliacao)}
+                            <Text style={styles.badgeAvaliado}>Avaliado</Text>
+                          </View>
                         ) : (
                           <TouchableOpacity
                             style={styles.btnAvaliar}
@@ -280,10 +327,8 @@ export default function DashboardCliente() {
               <View style={styles.modalBody}>
                 <Text style={styles.detailLabel}>Título</Text>
                 <Text style={styles.detailValue}>{pedidoDetalhado.title}</Text>
-
                 <Text style={styles.detailLabel}>Status</Text>
                 <Text style={styles.detailValue}>{traduzirStatus(pedidoDetalhado.demandStatus)}</Text>
-
                 {pedidoDetalhado.professionalId?.name && (
                   <>
                     <Text style={styles.detailLabel}>Profissional</Text>
@@ -292,11 +337,8 @@ export default function DashboardCliente() {
                     </Text>
                   </>
                 )}
-
                 <Text style={styles.detailLabel}>Descrição</Text>
                 <Text style={styles.detailDesc}>{pedidoDetalhado.description}</Text>
-
-                {/* Ações contextuais */}
                 {String(pedidoDetalhado.demandStatus).toUpperCase() === 'ABERTO' && (
                   <TouchableOpacity
                     style={styles.btnModalPrimary}
@@ -338,7 +380,7 @@ export default function DashboardCliente() {
               </View>
               <View style={styles.modalBody}>
                 <Text style={styles.detailLabel}>SUA NOTA</Text>
-                <View style={styles.starsRow}>
+                <View style={styles.starsRowLarge}>
                   {[1, 2, 3, 4, 5].map(num => (
                     <TouchableOpacity key={num} onPress={() => setEstrelas(num)}>
                       <FontAwesome5
@@ -353,7 +395,6 @@ export default function DashboardCliente() {
                 <Text style={styles.ratingQualifier}>
                   {estrelas === 5 ? 'Excelente!' : estrelas === 4 ? 'Muito Bom' : estrelas === 3 ? 'Regular' : estrelas === 2 ? 'Ruim' : 'Muito Ruim'}
                 </Text>
-
                 <Text style={styles.detailLabel}>COMENTÁRIO</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
@@ -362,7 +403,6 @@ export default function DashboardCliente() {
                   value={comentario}
                   onChangeText={setComentario}
                 />
-
                 <TouchableOpacity
                   style={styles.checkboxRow}
                   onPress={() => setAnonimo(!anonimo)}
@@ -372,7 +412,6 @@ export default function DashboardCliente() {
                   </View>
                   <Text style={styles.checkboxLabel}>Enviar anonimamente</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[styles.btnSubmit, enviandoAvaliacao && { opacity: 0.7 }]}
                   onPress={enviarAvaliacao}
@@ -403,13 +442,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    flexWrap: 'wrap',        // Marian, isso aqui permite quebrar se não couber
+    flexWrap: 'wrap',
     gap: 10,
   },
-  bannerTextContainer: {
-    flex: 1,
-    minWidth: 150,            // E aqui garante que o texto tenha um mínimo, blz?
-  },
+  bannerTextContainer: { flex: 1, minWidth: 150 },
   welcome: { fontSize: 18, color: '#1a202c' },
   name: { fontWeight: '800', color: '#0066ff' },
   sub: { fontSize: 13, color: '#718096', marginTop: 4 },
@@ -425,7 +461,18 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   btnEditText: { fontSize: 13, color: '#4a5568', fontWeight: '600' },
-  btnNewSolic: { flexDirection: 'row', backgroundColor: '#0066ff', marginHorizontal: 15, padding: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 15, elevation: 3 },
+  btnNewSolic: {
+    flexDirection: 'row',
+    backgroundColor: '#0066ff',
+    marginHorizontal: 15,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 15,
+    elevation: 3,
+  },
   btnNewSolicText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   statusCards: { flexDirection: 'row', paddingHorizontal: 15, gap: 10, marginBottom: 15 },
   statusCard: { flex: 1, backgroundColor: '#fff', padding: 15, borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
@@ -455,10 +502,22 @@ const styles = StyleSheet.create({
   orderDesc: { fontSize: 13, color: '#4a5568', lineHeight: 18, marginTop: 4 },
   rowFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: '#f7fafc', paddingTop: 10 },
   viewMore: { fontSize: 12, color: '#0066ff', fontWeight: '600' },
-  badgeAvaliado: { fontSize: 12, color: '#2b8a3e', fontWeight: '700' },
-  btnAvaliar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff9db', borderWidth: 1, borderColor: '#ffe3e3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50, gap: 4 },
+  badgeAvaliado: { fontSize: 12, color: '#2b8a3e', fontWeight: '700', marginLeft: 4 },
+  btnAvaliar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff9db',
+    borderWidth: 1,
+    borderColor: '#ffe3e3',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 50,
+    gap: 4,
+  },
   btnAvaliarText: { fontSize: 12, color: '#f59f00', fontWeight: '700' },
-  // Modal styles
+  starsRow: { flexDirection: 'row', gap: 2 },
+  starsRowLarge: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginVertical: 10 },
+  ratingQualifier: { textAlign: 'center', color: '#2d3748', fontWeight: '700', marginBottom: 10 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(26,32,44,0.4)', justifyContent: 'center', padding: 20 },
   modalSheet: { backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#edf2f7' },
@@ -470,8 +529,6 @@ const styles = StyleSheet.create({
   btnModalPrimary: { backgroundColor: '#0066ff', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 20 },
   btnModalSuccess: { backgroundColor: '#2b8a3e', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 20 },
   btnModalText: { color: '#fff', fontWeight: '600' },
-  starsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginVertical: 10 },
-  ratingQualifier: { textAlign: 'center', color: '#2d3748', fontWeight: '700', marginBottom: 10 },
   input: { borderWidth: 1, borderColor: '#cbd5e0', borderRadius: 8, padding: 12, fontSize: 14 },
   textArea: { height: 80, textAlignVertical: 'top' },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },

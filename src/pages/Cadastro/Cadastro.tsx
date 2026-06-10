@@ -17,6 +17,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
+import { Picker } from '@react-native-picker/picker';
+
+const ESTADOS = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
+  'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
+  'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+];
 
 interface CadastroFormData {
   tipo: string;
@@ -343,18 +350,27 @@ export default function Cadastro() {
               />
             </View>
           </View>
-          <View style={styles.row}>
-            <View style={styles.smallInput}>
-              <Text style={styles.label}>Estado</Text>
-              <Controller
-                control={control}
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput style={styles.input} onBlur={onBlur} onChangeText={onChange} value={value} maxLength={2} />
-                )}
-                name="estado"
-              />
-            </View>
-          </View>
+          <Controller
+            control={control}
+            name="estado"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Estado</Text>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={value || ''}
+                    onValueChange={(val) => onChange(val)}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Selecione o estado" value="" />
+                    {ESTADOS.map(uf => (
+                      <Picker.Item key={uf} label={uf} value={uf} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            )}
+          />
         </View>
 
         {/* Profissional extra */}
@@ -362,23 +378,26 @@ export default function Cadastro() {
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Dados Profissionais</Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Categoria</Text>
               <Controller
                 control={control}
+                name="categoria"
                 render={({ field: { onChange, value } }) => (
-                  <View style={styles.pickerWrapper}>
-                    {categorias.map((cat) => (
-                      <TouchableOpacity
-                        key={cat.id}
-                        style={[styles.categoryOption, value == cat.id && styles.categorySelected]}
-                        onPress={() => onChange(cat.id.toString())}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Categoria</Text>
+                    <View style={styles.pickerWrapper}>
+                      <Picker
+                        selectedValue={value || ''}
+                        onValueChange={(itemValue) => onChange(itemValue)}
+                        style={styles.picker}
                       >
-                        <Text style={{ color: value == cat.id ? '#fff' : '#333' }}>{cat.name}</Text>
-                      </TouchableOpacity>
-                    ))}
+                        <Picker.Item label="Selecione uma categoria" value="" />
+                        {categorias.map((cat) => (
+                          <Picker.Item key={cat.id} label={cat.name} value={cat.id.toString()} />
+                        ))}
+                      </Picker>
+                    </View>
                   </View>
                 )}
-                name="categoria"
               />
             </View>
           </View>
@@ -443,7 +462,16 @@ const styles = StyleSheet.create({
   smallInput: { flex: 0.7 },
   largeInput: { flex: 1.3 },
   errorText: { color: '#dc3545', fontSize: 12, marginTop: 4 },
-  pickerWrapper: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#fafafa',
+  },
+  picker: {
+    height: 50,
+  },
   categoryOption: { paddingHorizontal: 15, paddingVertical: 8, borderWidth: 1, borderColor: '#ccc', borderRadius: 20 },
   categorySelected: { backgroundColor: '#007bff', borderColor: '#007bff' },
   termsContainer: { marginVertical: 20 },

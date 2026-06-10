@@ -60,7 +60,7 @@ export default function DetalhesSolicitacao() {
           <View style={styles.gridContatos}>
             <View style={styles.itemContato}>
               <FontAwesome5 name="phone" size={16} color="#28a745" />
-              <Text>{demand.professionalId?.phone}</Text>
+              <Text>{demand.clientId?.phone || 'Não informado'}</Text>
             </View>
           </View>
           <View style={styles.enderecoServico}>

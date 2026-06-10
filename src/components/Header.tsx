@@ -21,40 +21,33 @@ export default function Header({ user, setUser }: HeaderProps) {
     navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
   };
 
+  const handleLogoPress = () => {
+    if (user?.tipo === 'CLIENT') {
+      navigation.navigate('DashboardCliente');
+    } else if (user?.tipo === 'PROFESSIONAL') {
+      navigation.navigate('DashboardProfissional');
+    } else {
+      navigation.navigate('Home');
+    }
+  };
+
   return (
     <View style={styles.header}>
       <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity onPress={handleLogoPress}>
           <Text style={styles.logoText}>conectaPRO</Text>
         </TouchableOpacity>
-        <View style={styles.headerNav}>
-          <TouchableOpacity onPress={() => navigation.navigate('FAQ')}>
-            <Text style={styles.navLink}>FAQ</Text>
-          </TouchableOpacity>
 
+        <View style={styles.headerNav}>
           {user ? (
-            <>
-              {user.tipo === 'CLIENT' && (
-                <TouchableOpacity onPress={() => navigation.navigate('ListaProf')}>
-                  <Text style={styles.navLink}>Serviços</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate(
-                    user.tipo === 'CLIENT' ? 'DashboardCliente' : 'DashboardProfissional'
-                  )
-                }
-              >
-                <Text style={styles.navLink}>Meu Painel</Text>
-              </TouchableOpacity>
-              <Text style={styles.userGreeting}>Olá, {user.nome.split(' ')[0]}</Text>
-              <TouchableOpacity onPress={handleLogout}>
-                <Text style={styles.btnLogout}>Sair</Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity onPress={handleLogout}>
+              <Text style={styles.btnLogout}>Sair</Text>
+            </TouchableOpacity>
           ) : (
             <>
+              <TouchableOpacity onPress={() => navigation.navigate('FAQ')}>
+                <Text style={styles.navLink}>FAQ</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.btnLogin}>Entrar</Text>
               </TouchableOpacity>
@@ -91,17 +84,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 15,
-    flexWrap: 'wrap',
   },
   navLink: {
     fontSize: 14,
     color: '#495057',
     fontWeight: '600',
-  },
-  userGreeting: {
-    fontSize: 14,
-    color: '#212529',
-    fontWeight: '500',
   },
   btnLogin: {
     fontSize: 14,
@@ -122,7 +109,7 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     borderWidth: 1,
     borderColor: '#dc3545',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 6,
     fontWeight: '600',

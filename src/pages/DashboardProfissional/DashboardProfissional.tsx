@@ -11,13 +11,16 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { getUserId } from '../../services/auth';
+import { getUserId, getUserType } from '../../services/auth';
+import Header from '../../components/Header';
 
 export default function DashboardProfissional() {
   const navigation = useNavigation<any>();
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('todos');
+  const [userName, setUserName] = useState('');
+  const [userType, setUserType] = useState<string | null>(null);
 
   const buscarPedidos = async () => {
     setLoading(true);
@@ -34,7 +37,18 @@ export default function DashboardProfissional() {
   };
 
   useFocusEffect(
-    useCallback(() => { buscarPedidos(); }, [])
+    useCallback(() => {
+      buscarPedidos();
+      (async () => {
+        try {
+          const userId = await getUserId();
+          const tipo = await getUserType();
+          setUserType(tipo);
+          const res = await api.get(`/api/user/${userId}`);
+          setUserName(res.data.name);
+        } catch (e) { }
+      })();
+    }, [])
   );
 
   const atualizarStatus = async (pedidoId: number, novoStatus: string) => {
@@ -61,6 +75,7 @@ export default function DashboardProfissional() {
 
   return (
     <View style={styles.bg}>
+      <Header user={userName ? { nome: userName, tipo: userType || undefined } : null} />
       <View style={styles.container}>
         <View style={styles.header}>
           <View>
