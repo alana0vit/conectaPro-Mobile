@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { logout as doLogout } from '../services/auth';
+import { logout as doLogout, getUserType } from '../services/auth';
 import Toast from 'react-native-toast-message';
 
 interface HeaderProps {
@@ -13,122 +13,118 @@ interface HeaderProps {
 
 export default function Header({ user, setUser }: HeaderProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [menuAberto, setMenuAberto] = useState(false);
 
   const handleLogout = async () => {
     await doLogout();
     if (setUser) setUser(null);
-    setMenuAberto(false);
     Toast.show({ type: 'success', text1: 'Logout realizado' });
     navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
   };
 
-  const navegarPara = (tela: keyof RootStackParamList) => {
-    setMenuAberto(false);
-    navigation.navigate(tela as any);
-  };
-
   return (
     <View style={styles.header}>
-      {/* BARRA SUPERIOR: Apenas o Ícone do Sanduíche na direita */}
       <View style={styles.headerContainer}>
-        <TouchableOpacity 
-          style={styles.menuButton} 
-          onPress={() => setMenuAberto(!menuAberto)}
-        >
-          <Text style={styles.menuIcon}>{menuAberto ? '✕' : '☰'}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Text style={styles.logoText}>conectaPRO</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* MENU DROPDOWN */}
-      {menuAberto && (
-        <View style={styles.dropdownMenu}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => navegarPara('Home')}>
-            <Text style={styles.navLink}>Home</Text>
+        <View style={styles.headerNav}>
+          <TouchableOpacity onPress={() => navigation.navigate('FAQ')}>
+            <Text style={styles.navLink}>FAQ</Text>
           </TouchableOpacity>
 
           {user ? (
             <>
-              <View style={styles.menuItem}>
-                <Text style={styles.userGreeting}>Olá, {user.nome}</Text>
-              </View>
-              <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+              {user.tipo === 'CLIENT' && (
+                <TouchableOpacity onPress={() => navigation.navigate('ListaProf')}>
+                  <Text style={styles.navLink}>Serviços</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate(
+                    user.tipo === 'CLIENT' ? 'DashboardCliente' : 'DashboardProfissional'
+                  )
+                }
+              >
+                <Text style={styles.navLink}>Meu Painel</Text>
+              </TouchableOpacity>
+              <Text style={styles.userGreeting}>Olá, {user.nome.split(' ')[0]}</Text>
+              <TouchableOpacity onPress={handleLogout}>
                 <Text style={styles.btnLogout}>Sair</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <TouchableOpacity style={styles.menuItem} onPress={() => navegarPara('Login')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.btnLogin}>Entrar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => navegarPara('Cadastro')}>
-                <Text style={styles.btnCadastro}>Cadastro</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
+                <Text style={styles.btnCadastro}>Cadastre-se</Text>
               </TouchableOpacity>
             </>
           )}
         </View>
-      )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f8ff',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
+    paddingVertical: 10,
   },
   headerContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end', // Garante que o menu fique na direita
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 45, // <--- Aqui é a mágica que empurra o sanduíche para baixo
-    paddingBottom: 15,
   },
-  menuButton: {
-    padding: 5,
-  },
-  menuIcon: {
-    fontSize: 32, // Aumentei levemente para ficar melhor o toque
-    color: '#333',
+  logoText: {
+    fontSize: 22,
     fontWeight: 'bold',
+    color: '#007bff',
   },
-  dropdownMenu: {
-    backgroundColor: '#f8f9fa',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  menuItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  headerNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    flexWrap: 'wrap',
   },
   navLink: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#495057',
+    fontWeight: '600',
   },
   userGreeting: {
-    fontSize: 16,
-    color: '#555',
-    fontStyle: 'italic',
+    fontSize: 14,
+    color: '#212529',
+    fontWeight: '500',
   },
   btnLogin: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#007bff',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   btnCadastro: {
-    fontSize: 18,
-    color: '#007bff',
-    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#fff',
+    backgroundColor: '#007bff',
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    borderRadius: 6,
+    fontWeight: '600',
   },
   btnLogout: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#dc3545',
-    fontWeight: 'bold',
+    borderWidth: 1,
+    borderColor: '#dc3545',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    fontWeight: '600',
   },
 });
