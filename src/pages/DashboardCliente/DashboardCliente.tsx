@@ -26,17 +26,14 @@ export default function DashboardCliente() {
   const [userName, setUserName] = useState('');
   const [userType, setUserType] = useState<string | null>(null);
 
-  // Modal de detalhes
   const [pedidoDetalhado, setPedidoDetalhado] = useState<any>(null);
 
-  // Modal de avaliação
   const [pedidoParaAvaliar, setPedidoParaAvaliar] = useState<any>(null);
   const [estrelas, setEstrelas] = useState(5);
   const [comentario, setComentario] = useState('');
   const [anonimo, setAnonimo] = useState(false);
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
 
-  // Mapa de avaliações: { [demandId]: pontuacao }
   const [avaliacoes, setAvaliacoes] = useState<Record<number, number>>({});
 
   const buscarPedidos = async () => {
@@ -140,7 +137,6 @@ export default function DashboardCliente() {
         anonymous: Boolean(anonimo),
       });
 
-      // Atualiza o mapa local com a pontuação
       setAvaliacoes(prev => ({ ...prev, [pedidoParaAvaliar.id]: Number(estrelas) }));
 
       Toast.show({ type: 'success', text1: 'Avaliação enviada com sucesso!' });
@@ -156,7 +152,6 @@ export default function DashboardCliente() {
     }
   };
 
-  // Renderiza as estrelas baseado na nota (1-5)
   const renderStars = (nota: number) => {
     return (
       <View style={styles.starsRow}>
@@ -175,10 +170,8 @@ export default function DashboardCliente() {
 
   return (
     <View style={styles.wrapper}>
-      {/* Header com informações do usuário logado */}
       <Header user={userName ? { nome: userName, tipo: userType || undefined } : null} />
 
-      {/* Banner */}
       <View style={styles.banner}>
         <View style={styles.bannerTextContainer}>
           <Text style={styles.welcome}>Olá, <Text style={styles.name}>{userName || 'Cliente'}</Text></Text>
@@ -195,7 +188,6 @@ export default function DashboardCliente() {
         <Text style={styles.btnNewSolicText}>Solicitar Novo Serviço</Text>
       </TouchableOpacity>
 
-      {/* Status cards */}
       <View style={styles.statusCards}>
         <TouchableOpacity
           style={[styles.statusCard, abaAtiva === 'ATIVAS' && cardSelecionado === 'ANDAMENTO' && styles.statusCardActive]}
@@ -220,7 +212,6 @@ export default function DashboardCliente() {
         </TouchableOpacity>
       </View>
 
-      {/* Lista */}
       <View style={styles.board}>
         <View style={styles.boardHeader}>
           <Text style={styles.boardTitle}>Listagem de Pedidos</Text>
@@ -313,7 +304,6 @@ export default function DashboardCliente() {
         )}
       </View>
 
-      {/* Modal de detalhes */}
       {pedidoDetalhado && (
         <Modal visible transparent animationType="fade">
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPedidoDetalhado(null)}>
@@ -367,7 +357,6 @@ export default function DashboardCliente() {
         </Modal>
       )}
 
-      {/* Modal de avaliação */}
       {pedidoParaAvaliar && (
         <Modal visible transparent animationType="slide">
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPedidoParaAvaliar(null)}>

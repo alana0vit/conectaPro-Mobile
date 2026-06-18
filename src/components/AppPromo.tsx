@@ -14,7 +14,6 @@ export default function AppPromo() {
 
   return (
     <View style={styles.container}>
-      {/* Aqui estão os textos novos que você sugeriu! */}
       <Text style={styles.titulo}>Em alta no aplicativo</Text>
       <Text style={styles.subtitulo}>Veja quais são os profissionais mais procurados por aqui.</Text>
       

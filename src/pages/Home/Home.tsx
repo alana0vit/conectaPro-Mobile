@@ -10,7 +10,7 @@ export default function Home() {
   const scrollRef = useRef<ScrollView>(null);
 
   const scrollToHowItWorks = () => {
-    scrollRef.current?.scrollTo({ y: 500, animated: true }); // Aproximado
+    scrollRef.current?.scrollTo({ y: 500, animated: true }); 
   };
 
   return (

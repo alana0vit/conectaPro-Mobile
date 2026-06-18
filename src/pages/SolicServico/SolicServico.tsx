@@ -34,7 +34,6 @@ export default function SolicServico() {
   const [loading, setLoading] = useState(false);
   const [profName, setProfName] = useState('');
 
-  // Imagem
   const [imagemUri, setImagemUri] = useState<string | null>(null);
   const [imagemFile, setImagemFile] = useState<any>(null); // para o FormData
 

@@ -17,7 +17,6 @@ import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 
-// Tipagem opcional para o parâmetro de reatribuição
 type ListaProfRouteParams = {
   reassignDemandId?: number;
 };
@@ -106,13 +105,12 @@ export default function ListaProf() {
     }
   };
 
-  // Filtro local por estrelas
   const profissionaisFiltrados = profissionais.filter((prof) => {
     const nota = prof.rating != null ? prof.rating : 5.0;
     if (filtroEstrelas === '4PLUS') return nota >= 4.0;
     if (filtroEstrelas === '3PLUS') return nota >= 3.0;
     if (filtroEstrelas === 'NEW') return prof.rating == null;
-    return true; // TODOS
+    return true; 
   });
 
   const coresTopo = ['#e6f0ff', '#e6ffe6', '#fff0e6', '#f0e6ff'];
@@ -152,7 +150,6 @@ export default function ListaProf() {
           </View>
 
           <View style={styles.filtrosLinha}>
-            {/* Seletor de categoria */}
             <TouchableOpacity
               style={styles.selectFiltro}
               onPress={() => setShowCategoriaPicker(true)}
@@ -246,7 +243,6 @@ export default function ListaProf() {
         )}
       </View>
 
-      {/* Modal de seleção de categoria */}
       <Modal visible={showCategoriaPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>

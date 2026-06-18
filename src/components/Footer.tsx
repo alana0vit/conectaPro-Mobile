@@ -11,7 +11,6 @@ export default function Footer() {
   return (
     <View style={styles.footerContainer}>
       <View style={styles.footerContent}>
-        {/* Coluna Nossas Redes */}
         <View style={styles.footerColumn}>
           <Text style={styles.columnTitle}>Nossas Redes</Text>
           <View style={styles.footerLinks}>
@@ -30,7 +29,6 @@ export default function Footer() {
           </View>
         </View>
 
-        {/* Coluna Contato */}
         <View style={styles.footerColumn}>
           <Text style={styles.columnTitle}>Contato</Text>
           <View style={styles.footerLinks}>

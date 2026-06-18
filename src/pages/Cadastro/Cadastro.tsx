@@ -104,7 +104,6 @@ export default function Cadastro() {
     try {
       await api.post('/api/user', payload);
       Toast.show({ type: 'success', text1: 'Cadastro realizado com sucesso! Faça login.' });
-      // Redireciona para a tela de Login
       navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     } catch (error: any) {
       const mensagem = error.response?.data?.message || 'Erro ao cadastrar';
@@ -153,7 +152,6 @@ export default function Cadastro() {
           Cadastro de {tipoSelecionado === 'CLIENTE' ? 'Cliente' : 'Profissional'}
         </Text>
 
-        {/* Dados Pessoais */}
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Dados Pessoais</Text>
           <View style={styles.inputGroup}>
@@ -275,7 +273,6 @@ export default function Cadastro() {
           </View>
         </View>
 
-        {/* Endereço */}
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Endereço</Text>
           <View style={styles.row}>
@@ -373,7 +370,6 @@ export default function Cadastro() {
           />
         </View>
 
-        {/* Profissional extra */}
         {tipoSelecionado === 'PROFISSIONAL' && (
           <View style={styles.formSection}>
             <Text style={styles.sectionTitle}>Dados Profissionais</Text>
