@@ -221,7 +221,6 @@ export default function DashboardCliente() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0066ff']} tintColor="#0066ff" />
         }
       >
-        {/* Banner */}
         <View style={styles.banner}>
           <View style={styles.bannerTextContainer}>
             <Text style={styles.welcome}>
@@ -235,13 +234,11 @@ export default function DashboardCliente() {
           </TouchableOpacity>
         </View>
 
-        {/* Botão Novo Serviço */}
         <TouchableOpacity style={styles.btnNewService} onPress={() => navigation.navigate('ListaProf')}>
           <Ionicons name="add-circle" size={20} color="#fff" />
           <Text style={styles.btnNewServiceText}>Solicitar Novo Serviço</Text>
         </TouchableOpacity>
 
-        {/* Status Cards - Compactos */}
         <View style={styles.statusCards}>
           <TouchableOpacity
             style={[styles.statusCard, abaAtiva === 'PENDENTE' && styles.statusCardActive]}
@@ -275,7 +272,6 @@ export default function DashboardCliente() {
           </TouchableOpacity>
         </View>
 
-        {/* Abas */}
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, abaAtiva === 'PENDENTE' && styles.tabActive]}
@@ -303,7 +299,6 @@ export default function DashboardCliente() {
           </TouchableOpacity>
         </View>
 
-        {/* Busca e Refresh */}
         <View style={styles.searchRow}>
           <View style={styles.searchInputWrapper}>
             <Ionicons name="search" size={16} color="#a0aec0" style={styles.searchIcon} />
@@ -324,7 +319,6 @@ export default function DashboardCliente() {
           </TouchableOpacity>
         </View>
 
-        {/* Lista de pedidos */}
         {loading ? (
           <ActivityIndicator size="large" color="#0066ff" style={{ marginTop: 30 }} />
         ) : pedidosFiltrados.length === 0 ? (
@@ -383,7 +377,6 @@ export default function DashboardCliente() {
         )}
       </ScrollView>
 
-      {/* Modal Detalhes */}
       <Modal visible={!!pedidoDetalhado} transparent animationType="fade">
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -491,7 +484,6 @@ export default function DashboardCliente() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Modal Avaliação */}
       <Modal visible={!!pedidoParaAvaliar} transparent animationType="slide">
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -741,7 +733,6 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#2d3748', marginTop: 12 },
   emptySub: { fontSize: 13, color: '#718096', marginTop: 6, textAlign: 'center' },
 
-  // Modais
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(26,32,44,0.4)',
@@ -808,7 +799,6 @@ const styles = StyleSheet.create({
   },
   btnModalText: { color: '#fff', fontWeight: '600' },
 
-  // Avaliação
   introText: { fontSize: 14, color: '#4a5568', marginBottom: 15, lineHeight: 20 },
   starsRowLarge: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 10 },
   ratingQualifier: { textAlign: 'center', fontWeight: '700', color: '#2d3748', marginBottom: 15 },

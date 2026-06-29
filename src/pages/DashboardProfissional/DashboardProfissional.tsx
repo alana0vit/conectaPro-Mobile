@@ -183,7 +183,6 @@ export default function DashboardProfissional() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} tintColor="#3b82f6" />
         }
       >
-        {/* Banner */}
         <View style={styles.banner}>
           <View style={styles.bannerTextContainer}>
             <Text style={styles.welcome}>Painel de Controle</Text>
@@ -209,7 +208,6 @@ export default function DashboardProfissional() {
           </TouchableOpacity>
         </View>
 
-        {/* Cards de estatísticas */}
         <View style={styles.statsRow}>
           <TouchableOpacity
             style={[styles.statCard, abaAtiva === 'NOVO' && styles.statCardActive]}
@@ -234,7 +232,6 @@ export default function DashboardProfissional() {
           </TouchableOpacity>
         </View>
 
-        {/* Abas */}
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, abaAtiva === 'NOVO' && styles.tabActive]}
@@ -262,7 +259,6 @@ export default function DashboardProfissional() {
           </TouchableOpacity>
         </View>
 
-        {/* Busca e Refresh */}
         <View style={styles.searchRow}>
           <View style={styles.searchInputWrapper}>
             <Ionicons name="search" size={16} color="#a0aec0" style={styles.searchIcon} />
@@ -283,7 +279,6 @@ export default function DashboardProfissional() {
           </TouchableOpacity>
         </View>
 
-        {/* Lista de demandas */}
         {loading ? (
           <ActivityIndicator size="large" color="#3b82f6" style={{ marginTop: 30 }} />
         ) : pedidosFiltrados.length === 0 ? (
@@ -351,7 +346,6 @@ export default function DashboardProfissional() {
         )}
       </ScrollView>
 
-      {/* Modal Detalhes */}
       <Modal visible={!!pedidoDetalhado} transparent animationType="fade">
         <TouchableOpacity
           style={styles.modalOverlay}
@@ -472,7 +466,6 @@ export default function DashboardProfissional() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Modal Confirmação */}
       <Modal visible={confirmacao.visivel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>
@@ -669,7 +662,6 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#2d3748', marginTop: 12 },
   emptySub: { fontSize: 13, color: '#718096', marginTop: 6, textAlign: 'center' },
 
-  // Modais
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(26,32,44,0.4)',
@@ -718,7 +710,6 @@ const styles = StyleSheet.create({
   modalActionsRow: { flexDirection: 'row', gap: 10 },
   btnFullWidth: { flex: 1, borderRadius: 8 },
 
-  // Modal confirmação
   confirmModal: {
     backgroundColor: '#fff',
     borderRadius: 16,

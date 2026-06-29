@@ -79,7 +79,6 @@ const EditarPerfil: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Busca endereço pelo CEP (igual ao web)
   const buscarEnderecoPorCep = async (cep: string) => {
     const cepLimpo = cep.replace(/\D/g, '');
     if (cepLimpo.length !== 8) return;
@@ -303,7 +302,6 @@ const EditarPerfil: React.FC = () => {
         <View style={styles.card}>
           <Text style={styles.title}>Editar Perfil</Text>
 
-          {/* Dados Pessoais */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Dados Pessoais</Text>
 
@@ -428,7 +426,6 @@ const EditarPerfil: React.FC = () => {
             )}
           </View>
 
-          {/* Endereço */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Endereço</Text>
 
@@ -540,7 +537,6 @@ const EditarPerfil: React.FC = () => {
             </View>
           </View>
 
-          {/* Confirmação de senha */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: '#dc2626' }]}>
               Confirme sua senha para salvar
@@ -578,7 +574,6 @@ const EditarPerfil: React.FC = () => {
             </View>
           </View>
 
-          {/* Botões */}
           <View style={styles.formActions}>
             <TouchableOpacity
               style={styles.btnCancel}

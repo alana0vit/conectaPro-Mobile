@@ -30,7 +30,6 @@ export default function EditarDemanda() {
     const buscarDadosDemanda = async () => {
       try {
         setCarregando(true);
-        // Busca todas as demandas e filtra pelo id, mesmo comportamento do web
         const response = await api.get('/api/demand/user');
         const todasDemandas = Array.isArray(response.data) ? response.data : [];
         const demandaAlvo = todasDemandas.find((d: any) => Number(d.id) === Number(id));

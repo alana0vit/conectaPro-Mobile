@@ -284,7 +284,6 @@ export default function Cadastro() {
             : 'Junte-se à nossa rede e conecte-se com clientes que precisam do seu talento.'}
         </Text>
 
-        {/* ==================== DADOS PESSOAIS ==================== */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Dados Pessoais</Text>
 
@@ -520,7 +519,6 @@ export default function Cadastro() {
           </View>
         </View>
 
-        {/* ============ SEÇÃO DADOS PROFISSIONAIS (somente profissional) ============ */}
         {tipoSelecionado === 'PROFISSIONAL' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Dados Profissionais</Text>
@@ -580,7 +578,6 @@ export default function Cadastro() {
           </View>
         )}
 
-        {/* ==================== ENDEREÇO ==================== */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Endereço</Text>
 
@@ -744,7 +741,6 @@ export default function Cadastro() {
           </View>
         </View>
 
-        {/* TERMOS E BOTÃO */}
         <View style={styles.termsContainer}>
           <Controller
             control={control}
@@ -797,7 +793,6 @@ export default function Cadastro() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Modal de sucesso */}
       <Modal
         visible={modalSucessoVisible}
         transparent

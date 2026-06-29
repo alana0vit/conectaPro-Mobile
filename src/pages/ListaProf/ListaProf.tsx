@@ -25,8 +25,8 @@ type ListaProfRouteParams = {
 
 const INTERVALO_REFRESH = 30_000;
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_PADDING = 16; // padding horizontal da grade
-const GRID_GAP = 12; // gap entre colunas
+const GRID_PADDING = 16;
+const GRID_GAP = 12;
 const CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 const ESTRELAS_OPCOES = [
@@ -196,7 +196,6 @@ export default function ListaProf() {
   return (
     <View style={styles.pagina}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Botão Voltar */}
         <TouchableOpacity style={styles.btnVoltar} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={20} color="#007bff" />
           <Text style={styles.btnVoltarText}>Voltar</Text>
@@ -359,7 +358,6 @@ export default function ListaProf() {
         </View>
       </ScrollView>
 
-      {/* Modal Categoria */}
       <Modal visible={showCategoriaPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -388,7 +386,6 @@ export default function ListaProf() {
         </View>
       </Modal>
 
-      {/* Modal Estrelas */}
       <Modal visible={showEstrelasPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -414,7 +411,6 @@ export default function ListaProf() {
         </View>
       </Modal>
 
-      {/* Modal Raio */}
       <Modal visible={showRaioPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -440,7 +436,6 @@ export default function ListaProf() {
         </View>
       </Modal>
 
-      {/* Modal Avaliações */}
       <Modal visible={!!modalAvaliacoes} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.avaliacoesModalContent}>

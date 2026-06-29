@@ -37,7 +37,7 @@ export default function SolicServico() {
   const [categorias, setCategorias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [profName, setProfName] = useState('');
-  const [profCategoryName, setProfCategoryName] = useState(''); // nome da especialidade
+  const [profCategoryName, setProfCategoryName] = useState('');
 
   const [imagemUri, setImagemUri] = useState<string | null>(null);
   const [imagemFile, setImagemFile] = useState<any>(null);
@@ -64,13 +64,11 @@ export default function SolicServico() {
         setCategorias(catRes.data || []);
         setProfName(profRes.data.name || '');
 
-        // Define a categoria automaticamente
         const primeiraCategoria = profRes.data.categories?.[0];
         if (primeiraCategoria) {
           setCategoryId(primeiraCategoria.id.toString());
           setProfCategoryName(primeiraCategoria.name || 'Especialista');
         } else if (catRes.data && catRes.data.length > 0) {
-          // fallback: primeira categoria da lista
           setCategoryId(catRes.data[0].id.toString());
           setProfCategoryName(catRes.data[0].name);
         } else {
@@ -185,7 +183,6 @@ export default function SolicServico() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      {/* Botão Voltar */}
       <TouchableOpacity style={styles.btnVoltar} onPress={() => navigation.goBack()}>
         <Ionicons name="arrow-back" size={18} color="#0066ff" />
         <Text style={styles.btnVoltarText}>Voltar</Text>
@@ -193,7 +190,6 @@ export default function SolicServico() {
 
       <Text style={styles.titulo}>Solicitar Serviço</Text>
 
-      {/* Destaque do profissional com nome e especialidade */}
       {profName ? (
         <View style={styles.profDestaque}>
           <Text style={styles.profDestaqueTexto}>
@@ -208,7 +204,6 @@ export default function SolicServico() {
         </View>
       ) : null}
 
-      {/* Título */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Título da demanda *</Text>
         <TextInput
@@ -220,7 +215,6 @@ export default function SolicServico() {
         />
       </View>
 
-      {/* Descrição */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Descrição *</Text>
         <TextInput
@@ -233,7 +227,6 @@ export default function SolicServico() {
         />
       </View>
 
-      {/* Endereço */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Endereço *</Text>
         <View style={styles.pickerWrapper}>
@@ -253,7 +246,6 @@ export default function SolicServico() {
         </View>
       </View>
 
-      {/* Valor máximo */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Valor máximo (R$)</Text>
         <TextInput
@@ -266,7 +258,6 @@ export default function SolicServico() {
         />
       </View>
 
-      {/* Data sugerida */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Data sugerida</Text>
         <TouchableOpacity
@@ -293,7 +284,6 @@ export default function SolicServico() {
         )}
       </View>
 
-      {/* Imagem */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Imagem (opcional)</Text>
         <TouchableOpacity style={styles.imagePickerButton} onPress={selecionarImagem}>
@@ -307,7 +297,6 @@ export default function SolicServico() {
         )}
       </View>
 
-      {/* Botão Enviar */}
       <TouchableOpacity
         style={[styles.btnEnviar, loading && styles.btnEnviarDisabled]}
         onPress={onSubmit}
