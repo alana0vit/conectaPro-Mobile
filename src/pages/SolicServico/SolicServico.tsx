@@ -37,6 +37,7 @@ export default function SolicServico() {
   const [categorias, setCategorias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [profName, setProfName] = useState('');
+  const [profCategoryName, setProfCategoryName] = useState(''); // nome da especialidade
 
   const [imagemUri, setImagemUri] = useState<string | null>(null);
   const [imagemFile, setImagemFile] = useState<any>(null);
@@ -63,12 +64,17 @@ export default function SolicServico() {
         setCategorias(catRes.data || []);
         setProfName(profRes.data.name || '');
 
-        // Categoria definida automaticamente pela especialidade do profissional
+        // Define a categoria automaticamente
         const primeiraCategoria = profRes.data.categories?.[0];
         if (primeiraCategoria) {
           setCategoryId(primeiraCategoria.id.toString());
+          setProfCategoryName(primeiraCategoria.name || 'Especialista');
         } else if (catRes.data && catRes.data.length > 0) {
+          // fallback: primeira categoria da lista
           setCategoryId(catRes.data[0].id.toString());
+          setProfCategoryName(catRes.data[0].name);
+        } else {
+          setProfCategoryName('Especialista');
         }
       } catch (error) {
         console.error('Erro ao carregar dados', error);
@@ -104,7 +110,6 @@ export default function SolicServico() {
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
-      // Valida se a data é futura (maior que hoje)
       const hojeInicio = new Date();
       hojeInicio.setHours(0, 0, 0, 0);
 
@@ -188,11 +193,18 @@ export default function SolicServico() {
 
       <Text style={styles.titulo}>Solicitar Serviço</Text>
 
+      {/* Destaque do profissional com nome e especialidade */}
       {profName ? (
         <View style={styles.profDestaque}>
           <Text style={styles.profDestaqueTexto}>
             Profissional: <Text style={styles.profDestaqueNome}>{profName}</Text>
           </Text>
+          {profCategoryName ? (
+            <View style={styles.especialidadeTag}>
+              <Ionicons name="hammer-outline" size={14} color="#0066ff" />
+              <Text style={styles.especialidadeTagText}>{profCategoryName}</Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -235,26 +247,6 @@ export default function SolicServico() {
                 key={a.id}
                 label={`${a.street}, ${a.number} - ${a.neighborhood}`}
                 value={a.id.toString()}
-              />
-            ))}
-          </Picker>
-        </View>
-      </View>
-
-      {/* Categoria (definida pelo profissional - desabilitada) */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Categoria (definida pelo profissional)</Text>
-        <View style={[styles.pickerWrapper, styles.pickerDisabled]}>
-          <Picker
-            selectedValue={categoryId}
-            enabled={false}
-            style={styles.picker}
-          >
-            {categorias.map((c) => (
-              <Picker.Item
-                key={c.id}
-                label={c.name}
-                value={c.id.toString()}
               />
             ))}
           </Picker>
@@ -366,24 +358,42 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     color: '#111',
-    marginBottom: 8,
+    marginBottom: 20,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   profDestaque: {
     backgroundColor: '#e3efff',
-    padding: 12,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#0066ff',
     marginBottom: 24,
   },
   profDestaqueTexto: {
-    fontSize: 15,
-    color: '#555',
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
   },
   profDestaqueNome: {
     color: '#0052cc',
     fontWeight: '700',
+  },
+  especialidadeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#0066ff30',
+  },
+  especialidadeTagText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0066ff',
   },
   inputGroup: {
     marginBottom: 18,
@@ -413,10 +423,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#fff',
-  },
-  pickerDisabled: {
-    backgroundColor: '#f5f5f5',
-    opacity: 0.8,
   },
   picker: {
     height: Platform.OS === 'ios' ? 180 : 50,
