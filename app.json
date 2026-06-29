@@ -35,13 +35,14 @@
         }
       ],
       [
-      "expo-build-properties",
-      {
-        "android": { 
+        "expo-build-properties",
+        {
+          "android": {
             "usesCleartextTraffic": true
+          }
         }
-      }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }
