@@ -1,104 +1,177 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Linking,
-  StyleSheet,
-} from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../navigation/types';
-import { FontAwesome5 } from '@expo/vector-icons';
-import Toast from 'react-native-toast-message';
-import api from '../../services/api';
+import React from 'react';
+import { View, Text, TouchableOpacity, Linking, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-type DetalhesRoute = RouteProp<RootStackParamList, 'DetalhesSolicitacao'>;
+interface Props {
+  demanda: any;
+  modo: 'CLIENTE' | 'PROFISSIONAL';
+}
 
-export default function DetalhesSolicitacao() {
-  const route = useRoute<DetalhesRoute>();
-  const { id } = route.params;
-  const [demand, setDemand] = useState<any>(null);
+export default function DetalhesSolicitacao({ demanda, modo }: Props) {
+  const exibirPessoa = modo === 'CLIENTE' ? demanda?.professionalId : demanda?.clientId;
+  const tituloRelacao = modo === 'CLIENTE' ? 'Profissional Designado' : 'Dados do Solicitante';
+  const inicialNome = exibirPessoa?.name ? exibirPessoa.name.charAt(0).toUpperCase() : 'U';
+  const endereco = demanda?.addressId;
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get(`/api/demand/user/${id}`);
-        setDemand(res.data);
-      } catch (error) {
-        Toast.show({ type: 'error', text1: 'Erro ao carregar detalhes' });
-      }
-    })();
-  }, [id]);
-
-  if (!demand) return null;
-
-  const statusTraduzido: Record<string, string> = {
-    ABERTO: 'Aberto',
-    AGUARDANDO: 'Em andamento',
-    FECHADO: 'Finalizado',
-    REJEITADO: 'Rejeitado',
+  const abrirWhatsApp = () => {
+    if (exibirPessoa?.phone) {
+      const numero = exibirPessoa.phone.replace(/\D/g, '');
+      Linking.openURL(`https://wa.me/${numero}`);
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{demand.title}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{statusTraduzido[demand.demandStatus] || demand.demandStatus}</Text>
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <View style={styles.badgeAndamento}>
+          <Text style={styles.badgeAndamentoText}>SESSÃO EM ANDAMENTO</Text>
+        </View>
+        <Text style={styles.headerTitle}>{tituloRelacao}</Text>
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.infoPrincipal}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{inicialNome}</Text>
+          </View>
+          <View style={styles.infoTextContainer}>
+            <Text style={styles.nome}>{exibirPessoa?.name || 'Usuário ConectaPro'}</Text>
+            <Text style={styles.especialidade}>
+              {modo === 'CLIENTE'
+                ? demanda?.categoryId?.name || 'Especialista Parceiro'
+                : 'Cliente Verificado'}
+            </Text>
           </View>
         </View>
-        <View style={styles.body}>
-          <View style={styles.infoPrincipal}>
-            <FontAwesome5 name="user-circle" size={40} color="#007bff" />
-            <View>
-              <Text style={styles.nome}>{demand.professionalId?.name || 'Profissional'}</Text>
-              <Text style={styles.email}>{demand.professionalId?.email}</Text>
+
+        <View style={styles.gridContatos}>
+          <View style={styles.itemContato}>
+            <Ionicons name="logo-whatsapp" size={18} color="#25d366" />
+            <View style={styles.itemContatoTexto}>
+              <Text style={styles.itemLabel}>WhatsApp / Telefone</Text>
+              <Text style={styles.itemValue}>{exibirPessoa?.phone || 'Contacto não registado'}</Text>
             </View>
           </View>
-          <View style={styles.gridContatos}>
-            <View style={styles.itemContato}>
-              <FontAwesome5 name="phone" size={16} color="#28a745" />
-              <Text>{demand.clientId?.phone || 'Não informado'}</Text>
+          <View style={styles.itemContato}>
+            <Ionicons name="mail-outline" size={18} color="#3b82f6" />
+            <View style={styles.itemContatoTexto}>
+              <Text style={styles.itemLabel}>E-mail de Contacto</Text>
+              <Text style={styles.itemValue}>{exibirPessoa?.email || 'email@naoinformado.com'}</Text>
             </View>
           </View>
+        </View>
+
+        {modo === 'PROFISSIONAL' && endereco && (
           <View style={styles.enderecoServico}>
-            <FontAwesome5 name="file-alt" size={20} color="#333" />
-            <Text style={{ flex: 1 }}>{demand.description}</Text>
-          </View>
-        </View>
-        {demand.professionalId?.phone && (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.btnWhatsapp}
-              onPress={() => Linking.openURL(`https://wa.me/55${demand.professionalId.phone.replace(/\D/g, '')}`)}
-            >
-              <FontAwesome5 name="whatsapp" size={20} color="#fff" />
-              <Text style={styles.btnWhatsappText}>Chamar no WhatsApp</Text>
-            </TouchableOpacity>
+            <Ionicons name="location-outline" size={18} color="#ef4444" />
+            <View style={styles.enderecoTexto}>
+              <Text style={styles.itemLabel}>Local do Serviço</Text>
+              <Text style={styles.itemValue}>
+                {endereco.street || 'Rua não informada'}, {endereco.number || 'S/N'}
+                {endereco.neighborhood ? ` - ${endereco.neighborhood}` : ''}
+                {endereco.city ? ` - ${endereco.city}` : ''}
+              </Text>
+            </View>
           </View>
         )}
       </View>
-    </ScrollView>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Combine os detalhes finais, valores e horários diretamente pelo WhatsApp.
+        </Text>
+        {exibirPessoa?.phone ? (
+          <TouchableOpacity style={styles.btnWhatsapp} onPress={abrirWhatsApp}>
+            <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
+            <Text style={styles.btnWhatsappText}>Iniciar Conversa</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.btnWhatsapp, styles.btnDisabled]}>
+            <Ionicons name="chatbubbles-outline" size={20} color="#94a3b8" />
+            <Text style={styles.btnDisabledText}>Sem número disponível</Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f8f9fa' },
-  card: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  title: { fontSize: 18, fontWeight: 'bold', flex: 1 },
-  badge: { backgroundColor: '#e6f0ff', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { color: '#007bff', fontWeight: 'bold' },
-  body: { padding: 20 },
-  infoPrincipal: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 20 },
-  nome: { fontSize: 16, fontWeight: 'bold' },
-  email: { color: '#888' },
-  gridContatos: { gap: 10, marginBottom: 20 },
-  itemContato: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  enderecoServico: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  footer: { padding: 20, borderTopWidth: 1, borderTopColor: '#eee' },
-  btnWhatsapp: { flexDirection: 'row', backgroundColor: '#25d366', justifyContent: 'center', alignItems: 'center', paddingVertical: 15, borderRadius: 8, gap: 10 },
-  btnWhatsappText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginTop: 15,
+    overflow: 'hidden',
+  },
+  header: {
+    backgroundColor: '#f8fafc',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#edf2f7',
+  },
+  badgeAndamento: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  badgeAndamentoText: { fontSize: 10, fontWeight: '800', color: '#92400e', letterSpacing: 0.5 },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: '#1e293b' },
+  body: { padding: 16 },
+  infoPrincipal: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  avatar: {
+    width: 45,
+    height: 45,
+    backgroundColor: '#1e293b',
+    borderRadius: 22.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  infoTextContainer: { flex: 1 },
+  nome: { fontSize: 16, fontWeight: '600', color: '#0f172a' },
+  especialidade: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  gridContatos: { gap: 12, marginBottom: 12 },
+  itemContato: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  itemContatoTexto: { flex: 1 },
+  itemLabel: { fontSize: 11, fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 },
+  itemValue: { fontSize: 13, color: '#334155', marginTop: 1 },
+  enderecoServico: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 12,
+    marginTop: 4,
+  },
+  enderecoTexto: { flex: 1 },
+  footer: {
+    backgroundColor: '#f8fafc',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#edf2f7',
+    alignItems: 'center',
+  },
+  footerText: { fontSize: 12, color: '#64748b', textAlign: 'center', marginBottom: 12 },
+  btnWhatsapp: {
+    flexDirection: 'row',
+    backgroundColor: '#25d366',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    width: '100%',
+  },
+  btnWhatsappText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  btnDisabled: {
+    backgroundColor: '#cbd5e1',
+  },
+  btnDisabledText: { color: '#94a3b8', fontWeight: '700', fontSize: 14 },
 });

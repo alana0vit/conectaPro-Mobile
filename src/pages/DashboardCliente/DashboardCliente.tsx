@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 import { getUserId } from '../../services/auth';
+import DetalhesSolicitacao from '../DetalhesSolicitacao/DetalhesSolicitacao';
 
 const INTERVALO_REFRESH = 30_000;
 
@@ -400,20 +401,66 @@ export default function DashboardCliente() {
               <Text style={styles.detailLabel}>Título</Text>
               <Text style={styles.detailValue}>{pedidoDetalhado?.title}</Text>
               <DemandInfoBadges demanda={pedidoDetalhado} />
+
+              {pedidoDetalhado?.categoryId?.name && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Categoria</Text>
+                  <Text style={styles.detailText}>{pedidoDetalhado.categoryId.name}</Text>
+                </View>
+              )}
+              {pedidoDetalhado?.suggestedValue != null && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Valor Sugerido</Text>
+                  <Text style={styles.detailText}>
+                    {Number(pedidoDetalhado.suggestedValue).toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    })}
+                  </Text>
+                </View>
+              )}
+              {pedidoDetalhado?.suggestedDate && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Data Sugerida</Text>
+                  <Text style={styles.detailText}>{pedidoDetalhado.suggestedDate}</Text>
+                </View>
+              )}
+
               <Text style={styles.detailLabel}>Status</Text>
               <View style={[styles.pillBase, getStatusPill(pedidoDetalhado?.demandStatus).style]}>
                 <Text style={styles.pillText}>{getStatusPill(pedidoDetalhado?.demandStatus).text}</Text>
               </View>
+
               {pedidoDetalhado?.professionalId?.name && (
-                <>
+                <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Profissional Designado</Text>
-                  <Text style={styles.detailValue}>
-                    {pedidoDetalhado.professionalId.name} - {pedidoDetalhado.professionalId.phone || 'Sem telefone'}
+                  <Text style={styles.detailText}>
+                    {pedidoDetalhado.professionalId.name}
+                    {pedidoDetalhado.professionalId.phone && ` • ${pedidoDetalhado.professionalId.phone}`}
                   </Text>
-                </>
+                  {pedidoDetalhado.professionalId.email && (
+                    <Text style={styles.detailSubText}>{pedidoDetalhado.professionalId.email}</Text>
+                  )}
+                </View>
               )}
+
+              {pedidoDetalhado?.addressId && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Local do Serviço</Text>
+                  <Text style={styles.detailText}>
+                    {pedidoDetalhado.addressId.street || 'Rua não informada'}, {pedidoDetalhado.addressId.number || 'S/N'}
+                    {pedidoDetalhado.addressId.neighborhood ? ` - ${pedidoDetalhado.addressId.neighborhood}` : ''}
+                    {pedidoDetalhado.addressId.city ? ` - ${pedidoDetalhado.addressId.city}` : ''}
+                  </Text>
+                </View>
+              )}
+
               <Text style={styles.detailLabel}>Descrição</Text>
               <Text style={styles.detailDesc}>{pedidoDetalhado?.description}</Text>
+
+              {String(pedidoDetalhado?.demandStatus).toUpperCase() === 'AGUARDANDO' && (
+                <DetalhesSolicitacao demanda={pedidoDetalhado} modo="CLIENTE" />
+              )}
 
               {String(pedidoDetalhado?.demandStatus).toUpperCase() === 'ABERTO' && (
                 <TouchableOpacity
@@ -584,14 +631,6 @@ const styles = StyleSheet.create({
   },
   statusNumber: { fontSize: 18, fontWeight: '800', color: '#1a202c' },
   statusLabel: { fontSize: 11, fontWeight: '600', color: '#2d3748', marginTop: 0 },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1a202c',
-    marginHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 5,
-  },
   tabs: {
     flexDirection: 'row',
     gap: 12,
@@ -734,6 +773,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   detailValue: { fontSize: 14, color: '#2d3748' },
+  detailRow: { marginBottom: 12 },
+  detailText: { fontSize: 14, color: '#2d3748', fontWeight: '500' },
+  detailSubText: { fontSize: 13, color: '#718096', marginTop: 2 },
   detailDesc: {
     fontSize: 14,
     color: '#2d3748',
