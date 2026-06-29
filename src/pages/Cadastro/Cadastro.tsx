@@ -189,7 +189,7 @@ export default function Cadastro() {
 
   const renderItem = (
     item: string,
-    value: string,
+    value: string | undefined,
     onChange: (val: string) => void,
     closeModal: () => void
   ) => (
