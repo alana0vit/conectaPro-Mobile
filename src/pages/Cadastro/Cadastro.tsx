@@ -138,7 +138,6 @@ export default function Cadastro() {
     buscarCategorias();
   }, []);
 
-  // Selecionar foto de perfil
   const selecionarFoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -203,7 +202,6 @@ export default function Cadastro() {
 
       const response = await api.post('/api/user', payload);
 
-      // Se houver foto, fazer login e upload
       if (fotoFile && response.data?.id) {
         try {
           const loginRes = await api.post('/auth/login', {
@@ -332,7 +330,6 @@ export default function Cadastro() {
           <Text style={styles.btnVoltarText}>Voltar</Text>
         </TouchableOpacity>
 
-        {/* Avatar de foto de perfil */}
         <View style={styles.avatarWrapper}>
           <TouchableOpacity onPress={selecionarFoto} style={styles.avatarTouchable}>
             {fotoPreview ? (
@@ -931,7 +928,6 @@ const styles = StyleSheet.create({
   btnVoltar: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   btnVoltarText: { fontSize: 16, color: '#007bff', marginLeft: 4 },
 
-  // Avatar de foto de perfil
   avatarWrapper: {
     alignItems: 'center',
     marginBottom: 20,

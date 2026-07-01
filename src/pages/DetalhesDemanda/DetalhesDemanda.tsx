@@ -46,7 +46,6 @@ const getStatusPill = (status: string) => {
   return { text: s, style: {} };
 };
 
-// Função para converter ArrayBuffer para base64
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   let binary = '';
   const bytes = new Uint8Array(buffer);
@@ -69,7 +68,6 @@ export default function DetalhesDemanda() {
   const [carregandoImagens, setCarregandoImagens] = useState(false);
   const [imagemAmpliada, setImagemAmpliada] = useState<string | null>(null);
 
-  // Baixa as imagens com autenticação
   useEffect(() => {
     const raw = demanda?.imgUrl;
     const nomes = Array.isArray(raw) ? raw.filter(Boolean) : typeof raw === 'string' && raw.trim() ? [raw] : [];
@@ -138,19 +136,16 @@ export default function DetalhesDemanda() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-        {/* Botão Voltar */}
         <TouchableOpacity style={styles.btnVoltar} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={20} color="#007bff" />
           <Text style={styles.btnVoltarText}>Voltar</Text>
         </TouchableOpacity>
 
-        {/* Título e Status */}
         <Text style={styles.titulo}>{demanda.title}</Text>
         <View style={[styles.pillBase, statusInfo.style]}>
           <Text style={styles.pillText}>{statusInfo.text}</Text>
         </View>
 
-        {/* Badges de informação */}
         <View style={styles.infoBadgesContainer}>
           {demanda?.categoryId?.name && (
             <View style={styles.categoryTag}>
@@ -178,7 +173,6 @@ export default function DetalhesDemanda() {
           )}
         </View>
 
-        {/* Pessoa relacionada */}
         {isCliente && demanda.professionalId?.name && (
           <View style={styles.infoRow}>
             <Ionicons name="person-outline" size={14} color="#666" />
@@ -198,11 +192,9 @@ export default function DetalhesDemanda() {
           </View>
         )}
 
-        {/* Descrição */}
         <Text style={styles.sectionTitle}>Descrição</Text>
         <Text style={styles.descricao}>{demanda.description}</Text>
 
-        {/* Fotos */}
         {carregandoImagens ? (
           <ActivityIndicator color="#0066ff" style={{ marginVertical: 15 }} />
         ) : imagensBase64.length > 0 ? (
@@ -220,12 +212,10 @@ export default function DetalhesDemanda() {
           </View>
         ) : null}
 
-        {/* Cartão de contato quando AGUARDANDO */}
         {String(demanda.demandStatus).toUpperCase() === 'AGUARDANDO' && (
           <DetalhesSolicitacao demanda={demanda} modo={modo} />
         )}
 
-        {/* Ações */}
         <View style={styles.actionsContainer}>
           {isCliente && String(demanda.demandStatus).toUpperCase() === 'ABERTO' && (
             <TouchableOpacity
@@ -276,7 +266,6 @@ export default function DetalhesDemanda() {
         </View>
       </ScrollView>
 
-      {/* Modal de imagem ampliada */}
       <Modal visible={!!imagemAmpliada} transparent={false} animationType="fade" onRequestClose={() => setImagemAmpliada(null)}>
         <View style={styles.modalImagemContainer}>
           <TouchableOpacity style={styles.fecharImagemBtn} onPress={() => setImagemAmpliada(null)}>
@@ -288,7 +277,6 @@ export default function DetalhesDemanda() {
         </View>
       </Modal>
 
-      {/* Modal de Confirmação */}
       <Modal visible={confirmacao.visivel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>

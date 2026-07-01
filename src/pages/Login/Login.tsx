@@ -117,7 +117,6 @@ export default function Login() {
             </Text>
           </TouchableOpacity>
 
-          {/* Link Esqueceu a senha */}
           <TouchableOpacity
             style={styles.esqueceuSenhaContainer}
             onPress={() => navigation.navigate('EsqueceuSenha')}

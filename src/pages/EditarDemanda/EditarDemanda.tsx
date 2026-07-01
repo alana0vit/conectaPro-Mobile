@@ -26,7 +26,7 @@ export default function EditarDemanda() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [existingImages, setExistingImages] = useState<string[]>([]); // imagens atuais
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImageUri, setNewImageUri] = useState<string | null>(null);
   const [newImageFile, setNewImageFile] = useState<any>(null);
   const [carregando, setCarregando] = useState(true);
@@ -89,7 +89,6 @@ export default function EditarDemanda() {
       formData.append('title', title.trim());
       formData.append('description', description.trim());
 
-      // Se houver nova imagem selecionada, envia no campo 'imagens' (array)
       if (newImageFile) {
         formData.append('imagens', newImageFile as any);
       }
@@ -148,7 +147,6 @@ export default function EditarDemanda() {
           />
         </View>
 
-        {/* Imagens existentes */}
         {existingImages.length > 0 && (
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Imagens atuais</Text>
@@ -160,7 +158,6 @@ export default function EditarDemanda() {
           </View>
         )}
 
-        {/* Upload nova imagem */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Adicionar imagem (opcional)</Text>
           <TouchableOpacity style={styles.imagePickerButton} onPress={selecionarImagem}>

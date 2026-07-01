@@ -47,7 +47,6 @@ const TELEFONE_MASK = [
 
 const CEP_MASK = [/\d/, /\d/, /\d/, /\d/, /\d/, '-', /\d/, /\d/, /\d/];
 
-// Função para converter ArrayBuffer para base64
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   let binary = '';
   const bytes = new Uint8Array(buffer);
@@ -89,7 +88,6 @@ const EditarPerfil: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Foto de perfil
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const [photoName, setPhotoName] = useState<string | null>(null);
@@ -141,13 +139,11 @@ const EditarPerfil: React.FC = () => {
       setUserType(userData.userType);
       setRegistryId(userData.registryId);
 
-      // Trata foto existente
       const photo = userData.photo || null;
       setPhotoName(photo);
 
       if (photo) {
         try {
-          // Baixa a imagem com token usando axios
           const imageResponse = await api.get(`/api/images/${photo}`, {
             responseType: 'arraybuffer',
           });
@@ -252,7 +248,6 @@ const EditarPerfil: React.FC = () => {
 
         if (res.data?.photo) {
           setPhotoName(res.data.photo);
-          // Atualiza o preview com a nova imagem baixada com token
           try {
             const imageResponse = await api.get(`/api/images/${res.data.photo}`, {
               responseType: 'arraybuffer',
@@ -261,7 +256,6 @@ const EditarPerfil: React.FC = () => {
             const mimeType = imageResponse.headers['content-type'] || 'image/jpeg';
             setFotoPreview(`data:${mimeType};base64,${base64}`);
           } catch (downloadError) {
-            // Mantém a URI local temporária se o download falhar
             console.warn('Preview remoto falhou, mantendo local:', downloadError);
           }
         }
@@ -270,7 +264,6 @@ const EditarPerfil: React.FC = () => {
       } catch (error) {
         console.error('Erro ao fazer upload da foto:', error);
         Toast.show({ type: 'error', text1: 'Erro ao atualizar a foto de perfil.' });
-        // Reverte para a foto anterior (se existia)
         if (photoName) {
           try {
             const imageResponse = await api.get(`/api/images/${photoName}`, {
@@ -414,7 +407,6 @@ const EditarPerfil: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.card}>
-          {/* Avatar de foto de perfil */}
           <View style={styles.avatarWrapper}>
             <TouchableOpacity onPress={selecionarFoto} style={styles.avatarTouchable} activeOpacity={0.8}>
               {fotoPreview ? (
@@ -759,7 +751,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  // Avatar
   avatarWrapper: {
     alignItems: 'center',
     marginBottom: 20,
