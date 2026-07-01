@@ -12,6 +12,7 @@ import {
   TextInput as RNTextInput,
   FlatList,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { MaskedTextInput } from 'react-native-mask-text';
@@ -22,6 +23,8 @@ import { RootStackParamList } from '../../navigation/types';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ESTADOS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
@@ -63,6 +66,9 @@ export default function Cadastro() {
   const [modalEstadoVisible, setModalEstadoVisible] = useState(false);
   const [modalCategoriaVisible, setModalCategoriaVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [fotoFile, setFotoFile] = useState<any>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<CadastroFormData>({
     defaultValues: {
@@ -132,6 +138,32 @@ export default function Cadastro() {
     buscarCategorias();
   }, []);
 
+  // Selecionar foto de perfil
+  const selecionarFoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Toast.show({ type: 'error', text1: 'Permissão para acessar a galeria negada.' });
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.length > 0) {
+      const asset = result.assets[0];
+      setFotoPreview(asset.uri);
+      setFotoFile({
+        uri: asset.uri,
+        name: asset.fileName || 'foto.jpg',
+        type: asset.mimeType || 'image/jpeg',
+      });
+    }
+  };
+
   const onSubmit = async (data: CadastroFormData) => {
     if (!data.aceiteTermos) {
       Toast.show({ type: 'error', text1: 'Aceite os termos de uso para continuar.' });
@@ -169,7 +201,32 @@ export default function Cadastro() {
         },
       };
 
-      await api.post('/api/user', payload);
+      const response = await api.post('/api/user', payload);
+
+      // Se houver foto, fazer login e upload
+      if (fotoFile && response.data?.id) {
+        try {
+          const loginRes = await api.post('/auth/login', {
+            email: data.email,
+            password: data.senha,
+          });
+
+          if (loginRes.data?.token) {
+            const formData = new FormData();
+            formData.append('foto', fotoFile as any);
+
+            await api.post(`/api/user/${response.data.id}/photo`, formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                Authorization: `Bearer ${loginRes.data.token}`,
+              },
+            });
+          }
+        } catch (fotoErr) {
+          console.error('Erro ao enviar foto:', fotoErr);
+        }
+      }
+
       setModalSucessoVisible(true);
       setTimeout(() => {
         setModalSucessoVisible(false);
@@ -274,6 +331,22 @@ export default function Cadastro() {
           <Ionicons name="arrow-back" size={18} color="#007bff" />
           <Text style={styles.btnVoltarText}>Voltar</Text>
         </TouchableOpacity>
+
+        {/* Avatar de foto de perfil */}
+        <View style={styles.avatarWrapper}>
+          <TouchableOpacity onPress={selecionarFoto} style={styles.avatarTouchable}>
+            {fotoPreview ? (
+              <Image source={{ uri: fotoPreview }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="camera" size={28} color="#94a3b8" />
+              </View>
+            )}
+            <View style={styles.avatarOverlay}>
+              <Ionicons name="camera" size={18} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.titleSerif}>
           {tipoSelecionado === 'CLIENTE' ? 'Cadastro de Cliente' : 'Cadastro de Profissional'}
@@ -857,6 +930,47 @@ const styles = StyleSheet.create({
   formContainer: { padding: 20, backgroundColor: '#fff', paddingBottom: 60 },
   btnVoltar: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   btnVoltarText: { fontSize: 16, color: '#007bff', marginLeft: 4 },
+
+  // Avatar de foto de perfil
+  avatarWrapper: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarTouchable: {
+    position: 'relative',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+  },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: '#e2e8f0',
+  },
+  avatarPlaceholder: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   section: { marginBottom: 25 },
   sectionTitle: {

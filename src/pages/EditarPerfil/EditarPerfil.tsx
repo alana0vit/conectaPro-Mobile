@@ -10,6 +10,7 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
@@ -17,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import MaskInput from 'react-native-mask-input';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { getUserId } from '../../services/auth';
@@ -44,6 +46,14 @@ const TELEFONE_MASK = [
 ];
 
 const CEP_MASK = [/\d/, /\d/, /\d/, /\d/, /\d/, '-', /\d/, /\d/, /\d/];
+
+// Função para converter ArrayBuffer para base64
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  bytes.forEach((b) => (binary += String.fromCharCode(b)));
+  return btoa(binary);
+};
 
 const EditarPerfil: React.FC = () => {
   const navigation = useNavigation();
@@ -78,6 +88,12 @@ const EditarPerfil: React.FC = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // Foto de perfil
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+  const [photoName, setPhotoName] = useState<string | null>(null);
+  const [usuarioAtual, setUsuarioAtual] = useState<any>(null);
 
   const buscarEnderecoPorCep = async (cep: string) => {
     const cepLimpo = cep.replace(/\D/g, '');
@@ -121,8 +137,30 @@ const EditarPerfil: React.FC = () => {
 
       const resUser = await api.get(`/api/user/${userId}`);
       const userData = resUser.data;
+      setUsuarioAtual(userData);
       setUserType(userData.userType);
       setRegistryId(userData.registryId);
+
+      // Trata foto existente
+      const photo = userData.photo || null;
+      setPhotoName(photo);
+
+      if (photo) {
+        try {
+          // Baixa a imagem com token usando axios
+          const imageResponse = await api.get(`/api/images/${photo}`, {
+            responseType: 'arraybuffer',
+          });
+          const base64 = arrayBufferToBase64(imageResponse.data);
+          const mimeType = imageResponse.headers['content-type'] || 'image/jpeg';
+          setFotoPreview(`data:${mimeType};base64,${base64}`);
+        } catch (imageError) {
+          console.error('Erro ao carregar foto existente:', imageError);
+          setFotoPreview(null);
+        }
+      } else {
+        setFotoPreview(null);
+      }
 
       let addressData: any = {};
       try {
@@ -180,6 +218,79 @@ const EditarPerfil: React.FC = () => {
     carregarDados();
   }, [carregarDados]);
 
+  const selecionarFoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Toast.show({ type: 'error', text1: 'Permissão para acessar a galeria negada.' });
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.length > 0) {
+      const asset = result.assets[0];
+      setFotoPreview(asset.uri);
+      setUploadingFoto(true);
+
+      try {
+        const userId = usuarioAtual?.id || (await getUserId());
+        const formData = new FormData();
+        formData.append('foto', {
+          uri: asset.uri,
+          name: asset.fileName || 'foto.jpg',
+          type: asset.mimeType || 'image/jpeg',
+        } as any);
+
+        const res = await api.post(`/api/user/${userId}/photo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        if (res.data?.photo) {
+          setPhotoName(res.data.photo);
+          // Atualiza o preview com a nova imagem baixada com token
+          try {
+            const imageResponse = await api.get(`/api/images/${res.data.photo}`, {
+              responseType: 'arraybuffer',
+            });
+            const base64 = arrayBufferToBase64(imageResponse.data);
+            const mimeType = imageResponse.headers['content-type'] || 'image/jpeg';
+            setFotoPreview(`data:${mimeType};base64,${base64}`);
+          } catch (downloadError) {
+            // Mantém a URI local temporária se o download falhar
+            console.warn('Preview remoto falhou, mantendo local:', downloadError);
+          }
+        }
+
+        Toast.show({ type: 'success', text1: 'Foto de perfil atualizada!' });
+      } catch (error) {
+        console.error('Erro ao fazer upload da foto:', error);
+        Toast.show({ type: 'error', text1: 'Erro ao atualizar a foto de perfil.' });
+        // Reverte para a foto anterior (se existia)
+        if (photoName) {
+          try {
+            const imageResponse = await api.get(`/api/images/${photoName}`, {
+              responseType: 'arraybuffer',
+            });
+            const base64 = arrayBufferToBase64(imageResponse.data);
+            const mimeType = imageResponse.headers['content-type'] || 'image/jpeg';
+            setFotoPreview(`data:${mimeType};base64,${base64}`);
+          } catch (revertError) {
+            setFotoPreview(null);
+          }
+        } else {
+          setFotoPreview(null);
+        }
+      } finally {
+        setUploadingFoto(false);
+      }
+    }
+  };
+
   const onSubmit = async (data: EditarPerfilForm) => {
     if (!data.password) {
       Toast.show({ type: 'error', text1: 'A senha atual é obrigatória.' });
@@ -210,6 +321,7 @@ const EditarPerfil: React.FC = () => {
         phone: data.phone.replace(/\D/g, ''),
         userType: userType,
         registryId: registryId,
+        photo: photoName || null,
         categoriesIds:
           userType === 'PROFESSIONAL' && data.categoryId
             ? [Number(data.categoryId)]
@@ -292,6 +404,8 @@ const EditarPerfil: React.FC = () => {
     );
   }
 
+  const inicialNome = usuarioAtual?.name ? usuarioAtual.name.charAt(0).toUpperCase() : '?';
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <View style={styles.wrapper}>
@@ -300,6 +414,26 @@ const EditarPerfil: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.card}>
+          {/* Avatar de foto de perfil */}
+          <View style={styles.avatarWrapper}>
+            <TouchableOpacity onPress={selecionarFoto} style={styles.avatarTouchable} activeOpacity={0.8}>
+              {fotoPreview ? (
+                <Image source={{ uri: fotoPreview }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarPlaceholderText}>{inicialNome}</Text>
+                </View>
+              )}
+              <View style={styles.avatarOverlay}>
+                {uploadingFoto ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Ionicons name="camera" size={18} color="#fff" />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.title}>Editar Perfil</Text>
 
           <View style={styles.section}>
@@ -624,6 +758,50 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  // Avatar
+  avatarWrapper: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarTouchable: {
+    position: 'relative',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  avatarImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 3,
+    borderColor: '#e2e8f0',
+  },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#e2e8f0',
+  },
+  avatarPlaceholderText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 22,
