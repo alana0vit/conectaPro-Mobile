@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,12 +32,20 @@ const CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 const ESTRELAS_OPCOES = [
   { label: '⭐ Todas as Notas', value: 'TODOS' },
+  { label: '⭐ 5 estrelas', value: '5' },
   { label: '⭐ 4.0 ou mais', value: '4PLUS' },
   { label: '⭐ 3.0 ou mais', value: '3PLUS' },
-  { label: '⭐ Apenas Novos (Sem Nota)', value: 'NEW' },
 ];
 
 const RAIO_OPCOES = [5, 10, 20, 50];
+
+// Função para converter ArrayBuffer para base64
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  bytes.forEach((b) => (binary += String.fromCharCode(b)));
+  return btoa(binary);
+};
 
 export default function ListaProf() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -55,12 +64,15 @@ export default function ListaProf() {
   const [showCategoriaPicker, setShowCategoriaPicker] = useState(false);
   const [showEstrelasPicker, setShowEstrelasPicker] = useState(false);
   const [showRaioPicker, setShowRaioPicker] = useState(false);
-  const [mostrarTooltipLocal, setMostrarTooltipLocal] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [modalAvaliacoes, setModalAvaliacoes] = useState<any>(null);
   const [avaliacoesData, setAvaliacoesData] = useState<any[]>([]);
   const [carregandoAvaliacoes, setCarregandoAvaliacoes] = useState(false);
+
+  // Estados para fotos
+  const [fotosBase64, setFotosBase64] = useState<Record<number, string | null>>({});
+  const [fotoExpandida, setFotoExpandida] = useState<string | null>(null);
 
   const ultimosFiltrosRef = useRef<any>({});
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -90,6 +102,7 @@ export default function ListaProf() {
     }
   };
 
+  // Busca automática com debounce
   const executarBuscaComFiltros = useCallback(() => {
     const filtros: any = {
       name: searchTerm || undefined,
@@ -122,6 +135,40 @@ export default function ListaProf() {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
     };
   }, []);
+
+  // Baixa as fotos dos profissionais sempre que a lista muda
+  useEffect(() => {
+    const carregarFotos = async () => {
+      const novasFotos: Record<number, string | null> = {};
+      const baseUrl = api.defaults.baseURL?.replace(/\/$/, '') || '';
+
+      const promessas = profissionais.map(async (prof) => {
+        if (!prof.photo) {
+          novasFotos[prof.id] = null;
+          return;
+        }
+        try {
+          const imageUrl = prof.photo.startsWith('http')
+            ? prof.photo
+            : `${baseUrl}/api/images/${prof.photo}`;
+          const response = await api.get(imageUrl, { responseType: 'arraybuffer' });
+          const base64 = arrayBufferToBase64(response.data);
+          const mimeType = response.headers['content-type'] || 'image/jpeg';
+          novasFotos[prof.id] = `data:${mimeType};base64,${base64}`;
+        } catch (error) {
+          console.error(`Erro ao baixar foto do profissional ${prof.id}:`, error);
+          novasFotos[prof.id] = null;
+        }
+      });
+
+      await Promise.all(promessas);
+      setFotosBase64(novasFotos);
+    };
+
+    if (profissionais.length > 0) {
+      carregarFotos();
+    }
+  }, [profissionais]);
 
   const lidarComBusca = () => {
     executarBuscaComFiltros();
@@ -180,10 +227,10 @@ export default function ListaProf() {
   const profissionaisFiltrados = profissionais
     .filter((prof) => {
       const nota = prof.rating != null ? prof.rating : -1;
+      if (filtroEstrelas === '5') return nota >= 5.0;
       if (filtroEstrelas === '4PLUS') return nota >= 4.0;
       if (filtroEstrelas === '3PLUS') return nota >= 3.0;
-      if (filtroEstrelas === 'NEW') return prof.rating == null;
-      return true;
+      return true; // TODOS
     })
     .sort((a, b) => {
       const notaA = a.rating != null ? a.rating : -1;
@@ -269,26 +316,19 @@ export default function ListaProf() {
                 <TouchableOpacity
                   style={styles.btnLocalizacao}
                   onPress={pegarLocalizacao}
-                  onLongPress={() => setMostrarTooltipLocal(true)}
-                  onPressOut={() => setMostrarTooltipLocal(false)}
                 >
                   <Ionicons name="navigate" size={14} color="#fff" />
                   <Text style={styles.btnLocalizacaoText}>Perto de mim</Text>
                 </TouchableOpacity>
               </View>
             </View>
-            {mostrarTooltipLocal && (
-              <View style={styles.tooltipLocal}>
-                <Text style={styles.tooltipText}>
-                  Busca por Geolocalização: Filtra automaticamente os prestadores parceiros num raio de {raioKm} km.
-                </Text>
-              </View>
-            )}
           </View>
         </View>
 
         <View style={styles.conteudoGrade}>
-          <Text style={styles.tituloSessao}>Profissionais Disponíveis</Text>
+          <Text style={styles.tituloSessao}>
+            Profissionais Disponíveis ({profissionaisFiltrados.length})
+          </Text>
 
           {loading ? (
             <ActivityIndicator size="large" color="#0066ff" style={{ marginTop: 30 }} />
@@ -302,62 +342,88 @@ export default function ListaProf() {
               numColumns={2}
               columnWrapperStyle={styles.columnWrapper}
               contentContainerStyle={styles.listContent}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  style={[styles.cartao, { width: CARD_WIDTH }]}
-                  activeOpacity={0.8}
-                  onPress={() => lidarComSelecaoProfissional(item.id)}
-                >
-                  <View style={[styles.topoColorido, { backgroundColor: coresTopo[index % coresTopo.length] }]} />
-                  <View style={styles.corpoCartao}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarTexto}>
-                        {item.name ? item.name.charAt(0).toUpperCase() : 'U'}
-                      </Text>
-                    </View>
-                    <Text style={styles.nome} numberOfLines={1}>{item.name}</Text>
-                    {item.categories && item.categories.length > 0 ? (
-                      <Text style={styles.especialidade} numberOfLines={1}>
-                        {item.categories.map((c: any) => c.name).join(' • ')}
-                      </Text>
-                    ) : (
-                      <Text style={styles.especialidadeVazia}>Especialidade não informada</Text>
-                    )}
-                    <View style={styles.avaliacao}>
-                      <Ionicons
-                        name="star"
-                        size={14}
-                        color={item.rating ? '#ffcc00' : '#ccc'}
-                      />
-                      {item.rating != null ? (
-                        <Text style={styles.avaliacaoNota}>{item.rating.toFixed(1)}</Text>
-                      ) : (
-                        <Text style={styles.avaliacaoSemNota}>Sem avaliação</Text>
+              renderItem={({ item, index }) => {
+                const fotoUri = fotosBase64[item.id];
+                const localizacao = item.adresses && item.adresses.length > 0
+                  ? `${item.adresses[0].neighborhood}, ${item.adresses[0].city}`
+                  : null;
+
+                return (
+                  <TouchableOpacity
+                    style={[styles.cartao, { width: CARD_WIDTH }]}
+                    activeOpacity={0.8}
+                    onPress={() => lidarComSelecaoProfissional(item.id)}
+                  >
+                    <View style={[styles.topoColorido, { backgroundColor: coresTopo[index % coresTopo.length] }]} />
+                    <View style={styles.corpoCartao}>
+                      <TouchableOpacity
+                        onPress={() => fotoUri && setFotoExpandida(fotoUri)}
+                        disabled={!fotoUri}
+                      >
+                        <View style={styles.avatar}>
+                          {fotoUri ? (
+                            <Image source={{ uri: fotoUri }} style={styles.avatarImage} />
+                          ) : (
+                            <Text style={styles.avatarTexto}>
+                              {item.name ? item.name.charAt(0).toUpperCase() : 'U'}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+
+                      <Text style={styles.nome} numberOfLines={1}>{item.name}</Text>
+
+                      {localizacao && (
+                        <Text style={styles.localizacao} numberOfLines={1}>
+                          <Ionicons name="location-outline" size={10} color="#64748b" /> {localizacao}
+                        </Text>
                       )}
+
+                      {item.categories && item.categories.length > 0 ? (
+                        <Text style={styles.especialidade} numberOfLines={1}>
+                          {item.categories.map((c: any) => c.name).join(' • ')}
+                        </Text>
+                      ) : (
+                        <Text style={styles.especialidadeVazia}>Especialidade não informada</Text>
+                      )}
+
+                      <View style={styles.avaliacao}>
+                        {item.rating != null ? (
+                          <>
+                            <Ionicons name="star" size={14} color="#f59e0b" />
+                            <Text style={styles.avaliacaoNota}>{item.rating.toFixed(1)}</Text>
+                          </>
+                        ) : (
+                          <Text style={styles.avaliacaoSemNota}>Sem avaliação</Text>
+                        )}
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.btnVerAvaliacoes}
+                        onPress={() => abrirModalAvaliacoes(item.id, item.name)}
+                      >
+                        <Ionicons name="chatbubbles-outline" size={14} color="#3b82f6" />
+                        <Text style={styles.btnVerAvaliacoesText}>Ver avaliações</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.btnCard, isReassign && styles.btnReatribuir]}
+                        onPress={() => lidarComSelecaoProfissional(item.id)}
+                      >
+                        <Text style={[styles.btnCardText, isReassign && { color: '#fff' }]}>
+                          {isReassign ? 'Reatribuir a Este' : 'Solicitar Serviço'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.btnVerAvaliacoes}
-                      onPress={() => abrirModalAvaliacoes(item.id, item.name)}
-                    >
-                      <Ionicons name="chatbubbles-outline" size={14} color="#3b82f6" />
-                      <Text style={styles.btnVerAvaliacoesText}>Ver avaliações</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.btnCard, isReassign && styles.btnReatribuir]}
-                      onPress={() => lidarComSelecaoProfissional(item.id)}
-                    >
-                      <Text style={[styles.btnCardText, isReassign && { color: '#fff' }]}>
-                        {isReassign ? 'Reatribuir a Este' : 'Solicitar Serviço'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              )}
+                  </TouchableOpacity>
+                );
+              }}
             />
           )}
         </View>
       </ScrollView>
 
+      {/* Modal Categoria */}
       <Modal visible={showCategoriaPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -386,6 +452,7 @@ export default function ListaProf() {
         </View>
       </Modal>
 
+      {/* Modal Estrelas */}
       <Modal visible={showEstrelasPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -411,6 +478,7 @@ export default function ListaProf() {
         </View>
       </Modal>
 
+      {/* Modal Raio */}
       <Modal visible={showRaioPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -436,6 +504,7 @@ export default function ListaProf() {
         </View>
       </Modal>
 
+      {/* Modal Avaliações */}
       <Modal visible={!!modalAvaliacoes} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.avaliacoesModalContent}>
@@ -484,6 +553,18 @@ export default function ListaProf() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal Foto Expandida */}
+      <Modal visible={!!fotoExpandida} transparent={false} animationType="fade" onRequestClose={() => setFotoExpandida(null)}>
+        <View style={styles.modalFotoContainer}>
+          <TouchableOpacity style={styles.fecharFotoBtn} onPress={() => setFotoExpandida(null)}>
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          {fotoExpandida && (
+            <Image source={{ uri: fotoExpandida }} style={styles.fotoExpandidaImg} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -499,11 +580,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     gap: 6,
   },
-  btnVoltarText: {
-    fontSize: 16,
-    color: '#007bff',
-    fontWeight: '500',
-  },
+  btnVoltarText: { fontSize: 16, color: '#007bff', fontWeight: '500' },
   bannerReatribuir: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -598,13 +675,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   btnLocalizacaoText: { color: '#fff', fontWeight: '500', fontSize: 13 },
-  tooltipLocal: {
-    backgroundColor: '#1e293b',
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 4,
-  },
-  tooltipText: { color: '#fff', fontSize: 12, lineHeight: 18 },
   conteudoGrade: { paddingHorizontal: GRID_PADDING, paddingTop: 10, backgroundColor: '#fcfcfc' },
   tituloSessao: { fontSize: 22, fontWeight: '700', color: '#111', marginBottom: 20, marginTop: 10 },
   vazio: { textAlign: 'center', color: '#666', marginTop: 30, fontSize: 15 },
@@ -633,9 +703,16 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#fff',
     marginBottom: 10,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
   },
   avatarTexto: { color: '#fff', fontSize: 24, fontWeight: '800' },
   nome: { fontSize: 16, fontWeight: '700', color: '#111', textAlign: 'center', marginBottom: 2 },
+  localizacao: { fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 4 },
   especialidade: { fontSize: 13, color: '#666', textAlign: 'center', marginBottom: 6 },
   especialidadeVazia: { fontSize: 12, color: '#aaa', fontStyle: 'italic', marginBottom: 6 },
   avaliacao: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
@@ -715,4 +792,23 @@ const styles = StyleSheet.create({
   avaliacaoItemAutor: { fontWeight: '600', fontSize: 13, color: '#333', flex: 1 },
   avaliacaoItemEstrelas: { flexDirection: 'row', gap: 2 },
   avaliacaoItemDesc: { fontSize: 13, color: '#555', marginTop: 6, lineHeight: 18 },
+  modalFotoContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fecharFotoBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  fotoExpandidaImg: {
+    width: '100%',
+    height: '80%',
+  },
 });
