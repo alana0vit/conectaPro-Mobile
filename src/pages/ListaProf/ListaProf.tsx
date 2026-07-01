@@ -60,6 +60,8 @@ export default function ListaProf() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('');
   const [filtroEstrelas, setFiltroEstrelas] = useState('TODOS');
   const [raioKm, setRaioKm] = useState(20);
+  const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
+  const [coordenadas, setCoordenadas] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const [showCategoriaPicker, setShowCategoriaPicker] = useState(false);
   const [showEstrelasPicker, setShowEstrelasPicker] = useState(false);
@@ -108,8 +110,14 @@ export default function ListaProf() {
       name: searchTerm || undefined,
       categoryId: categoriaSelecionada || undefined,
     };
+    // Se localização estiver ativa e tivermos coordenadas, inclui na busca
+    if (usandoLocalizacao && coordenadas) {
+      filtros.latitude = coordenadas.latitude;
+      filtros.longitude = coordenadas.longitude;
+      filtros.radiusKm = raioKm;
+    }
     buscarProfissionais(filtros);
-  }, [searchTerm, categoriaSelecionada, filtroEstrelas, raioKm]);
+  }, [searchTerm, categoriaSelecionada, filtroEstrelas, raioKm, usandoLocalizacao, coordenadas]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -174,23 +182,28 @@ export default function ListaProf() {
     executarBuscaComFiltros();
   };
 
-  const pegarLocalizacao = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Toast.show({ type: 'error', text1: 'Permissão de localização negada.' });
-        return;
+  const alternarLocalizacao = async () => {
+    if (usandoLocalizacao) {
+      // Desativa a localização
+      setUsandoLocalizacao(false);
+      setCoordenadas(null);
+    } else {
+      // Solicita permissão e coordenadas
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Toast.show({ type: 'error', text1: 'Permissão de localização negada.' });
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({});
+        setCoordenadas({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+        setUsandoLocalizacao(true);
+      } catch (error) {
+        Toast.show({ type: 'error', text1: 'Erro ao obter localização.' });
       }
-      const loc = await Location.getCurrentPositionAsync({});
-      buscarProfissionais({
-        name: searchTerm || undefined,
-        categoryId: categoriaSelecionada || undefined,
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        radiusKm: raioKm,
-      });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Erro ao obter localização.' });
     }
   };
 
@@ -314,11 +327,13 @@ export default function ListaProf() {
                   <Ionicons name="chevron-down" size={12} color="#666" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.btnLocalizacao}
-                  onPress={pegarLocalizacao}
+                  style={[styles.btnLocalizacao, usandoLocalizacao && styles.btnLocalizacaoAtivo]}
+                  onPress={alternarLocalizacao}
                 >
                   <Ionicons name="navigate" size={14} color="#fff" />
-                  <Text style={styles.btnLocalizacaoText}>Perto de mim</Text>
+                  <Text style={styles.btnLocalizacaoText}>
+                    {usandoLocalizacao ? 'GPS ativo' : 'Perto de mim'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -673,6 +688,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     gap: 6,
+  },
+  btnLocalizacaoAtivo: {
+    backgroundColor: '#0066ff',
   },
   btnLocalizacaoText: { color: '#fff', fontWeight: '500', fontSize: 13 },
   conteudoGrade: { paddingHorizontal: GRID_PADDING, paddingTop: 10, backgroundColor: '#fcfcfc' },
