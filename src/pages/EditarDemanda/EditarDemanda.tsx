@@ -7,12 +7,15 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 type EditarDemandaRoute = RouteProp<RootStackParamList, 'EditarDemanda'>;
 
@@ -23,6 +26,9 @@ export default function EditarDemanda() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [existingImages, setExistingImages] = useState<string[]>([]); // imagens atuais
+  const [newImageUri, setNewImageUri] = useState<string | null>(null);
+  const [newImageFile, setNewImageFile] = useState<any>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
@@ -37,6 +43,7 @@ export default function EditarDemanda() {
         if (demandaAlvo) {
           setTitle(demandaAlvo.title || '');
           setDescription(demandaAlvo.description || '');
+          setExistingImages(demandaAlvo.imgUrl || []);
         } else {
           Toast.show({ type: 'error', text1: 'Solicitação não encontrada.' });
           navigation.goBack();
@@ -52,6 +59,23 @@ export default function EditarDemanda() {
     if (id) buscarDadosDemanda();
   }, [id, navigation]);
 
+  const selecionarImagem = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length > 0) {
+      const asset = result.assets[0];
+      setNewImageUri(asset.uri);
+      setNewImageFile({
+        uri: asset.uri,
+        name: asset.fileName || 'imagem.jpg',
+        type: asset.mimeType || 'image/jpeg',
+      });
+    }
+  };
+
   const lidarComSubmissao = async () => {
     if (!title.trim() || !description.trim()) {
       Toast.show({ type: 'error', text1: 'Por favor, preencha todos os campos obrigatórios.' });
@@ -64,6 +88,11 @@ export default function EditarDemanda() {
       const formData = new FormData();
       formData.append('title', title.trim());
       formData.append('description', description.trim());
+
+      // Se houver nova imagem selecionada, envia no campo 'imagens' (array)
+      if (newImageFile) {
+        formData.append('imagens', newImageFile as any);
+      }
 
       await api.patch(`/api/demand/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -117,6 +146,32 @@ export default function EditarDemanda() {
             value={description}
             onChangeText={setDescription}
           />
+        </View>
+
+        {/* Imagens existentes */}
+        {existingImages.length > 0 && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Imagens atuais</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {existingImages.map((url, idx) => (
+                <Image key={idx} source={{ uri: url }} style={styles.existingImage} resizeMode="cover" />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Upload nova imagem */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Adicionar imagem (opcional)</Text>
+          <TouchableOpacity style={styles.imagePickerButton} onPress={selecionarImagem}>
+            <Ionicons name="image-outline" size={20} color="#0066ff" />
+            <Text style={styles.imagePickerText}>
+              {newImageUri ? 'Nova imagem selecionada' : 'Selecionar imagem'}
+            </Text>
+          </TouchableOpacity>
+          {newImageUri && (
+            <Image source={{ uri: newImageUri }} style={styles.previewImage} />
+          )}
         </View>
 
         <View style={styles.buttonsRow}>
@@ -208,6 +263,36 @@ const styles = StyleSheet.create({
     height: 140,
     textAlignVertical: 'top',
     lineHeight: 20,
+  },
+  existingImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    marginRight: 10,
+    backgroundColor: '#f1f5f9',
+  },
+  imagePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#cbd5e0',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  imagePickerText: {
+    color: '#0066ff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'contain',
+    marginTop: 10,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
   },
   buttonsRow: {
     flexDirection: 'row',
