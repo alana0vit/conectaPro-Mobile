@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,75 +6,81 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 
-interface FormData {
-  email: string;
-}
-
 export default function EsqueceuSenha() {
-  const navigation = useNavigation();
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (data: FormData) => {
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      Toast.show({ type: 'error', text1: 'Informe um e-mail válido.' });
+      return;
+    }
+    setLoading(true);
     try {
-      await api.post('/esqueceu-senha', data);
-      Toast.show({ type: 'success', text1: 'E-mail enviado!', text2: 'Verifique sua caixa de entrada.' });
+      await api.post('/auth/forgot-password', { email: email.trim() });
+      Toast.show({ type: 'success', text1: 'Link de recuperação enviado para seu e-mail!' });
       navigation.goBack();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Erro ao enviar e-mail';
-      Toast.show({ type: 'error', text1: msg });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Erro ao enviar e-mail. Verifique se o e-mail está cadastrado.' });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.card}>
-        <TouchableOpacity style={styles.btnVoltar} onPress={() => navigation.goBack()}>
-          <Text style={styles.btnVoltarText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Esqueceu a senha?</Text>
-        <Text style={styles.subtitle}>
-          Informe seu e-mail para receber as instruções de redefinição.
-        </Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={styles.card}>
+          <Text style={styles.title}>Recuperar Senha</Text>
+          <Text style={styles.description}>
+            Digite seu e-mail abaixo. Enviaremos um link para você definir uma nova senha.
+          </Text>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>E-mail</Text>
-          <Controller
-            control={control}
-            rules={{ required: 'E-mail obrigatório' }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-              />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>E-mail</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="seu@email.com"
+              placeholderTextColor="#94a3b8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>Enviar Link de Recuperação</Text>
             )}
-            name="email"
-          />
-          {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-        </View>
+          </TouchableOpacity>
 
-        <View style={styles.botoesAcao}>
-          <TouchableOpacity style={styles.btnSalvar} onPress={handleSubmit(onSubmit)}>
-            <Text style={styles.btnText}>Enviar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btnCancelar} onPress={() => navigation.goBack()}>
-            <Text style={styles.btnCancelarText}>Cancelar</Text>
-          </TouchableOpacity>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Lembrou da senha? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.footerLink}>Voltar para o login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -87,26 +93,75 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 25,
+    borderRadius: 16,
+    padding: 30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 30,
     elevation: 3,
   },
-  btnVoltar: { marginBottom: 15 },
-  btnVoltarText: { color: '#007bff', fontSize: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
-  subtitle: { color: '#777', textAlign: 'center', marginBottom: 25 },
-  inputGroup: { marginBottom: 20 },
-  label: { fontWeight: '600', marginBottom: 8, color: '#444' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 14, fontSize: 16 },
-  inputError: { borderColor: '#dc3545' },
-  errorText: { color: '#dc3545', fontSize: 12, marginTop: 4 },
-  botoesAcao: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-  btnSalvar: { backgroundColor: '#0066ff', paddingVertical: 14, paddingHorizontal: 30, borderRadius: 8 },
-  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  btnCancelar: { borderWidth: 1, borderColor: '#ccc', paddingVertical: 14, paddingHorizontal: 30, borderRadius: 8 },
-  btnCancelarText: { color: '#666' },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    color: '#334155',
+  },
+  submitBtn: {
+    backgroundColor: '#007bff',
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  submitText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  footerLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007bff',
+  },
 });

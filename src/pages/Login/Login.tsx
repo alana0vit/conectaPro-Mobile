@@ -117,6 +117,13 @@ export default function Login() {
             </Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.esqueceuSenhaContainer}
+            onPress={() => navigation.navigate('EsqueceuSenha')}
+          >
+            <Text style={styles.esqueceuSenhaText}>Esqueceu a senha?</Text>
+          </TouchableOpacity>
+
           <View style={styles.loginFooter}>
             <Text>Ainda não tem conta? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
@@ -168,6 +175,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnSubmitText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  esqueceuSenhaContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  esqueceuSenhaText: {
+    color: '#0066ff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   loginFooter: {
     flexDirection: 'row',
     justifyContent: 'center',

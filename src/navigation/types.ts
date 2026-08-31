@@ -4,10 +4,14 @@ export type RootStackParamList = {
   Cadastro: undefined;
   DashboardCliente: undefined;
   DashboardProfissional: undefined;
-  DetalhesSolicitacao: { id: number };
+  DetalhesDemanda: {
+    demanda: any;
+    modo: 'CLIENTE' | 'PROFISSIONAL';
+  };
   EditarDemanda: { id: number };
   EditarPerfil: undefined;
   EsqueceuSenha: undefined;
+  RedefinicaoSenha: { token: string };
   FaleConosco: undefined;
   FAQ: undefined;
   ListaProf: undefined;

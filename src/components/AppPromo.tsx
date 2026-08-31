@@ -30,7 +30,7 @@ export default function AppPromo() {
     </View>
   );
 }
-
+//a
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 45,
