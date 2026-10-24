@@ -201,9 +201,49 @@ export default function DashboardProfissional() {
             <Text style={styles.welcome}>Painel de Controle</Text>
             <Text style={styles.sub}>Olá, <Text style={styles.name}>{userName || 'Profissional'}</Text>. Veja como está sua agenda.</Text>
             {dadosPerfil && (
-              <View style={styles.reputacaoContainer}>
-                <Ionicons name="star" size={16} color={dadosPerfil.rating ? '#ffc107' : '#ccc'} />
-                <Text style={styles.reputacaoText}>Sua Reputação: {dadosPerfil.rating != null ? Number(dadosPerfil.rating).toFixed(1) : 'Sem avaliação'}</Text>
+              <View>
+                <View style={styles.reputacaoContainer}>
+                  <Ionicons
+                    name="star"
+                    size={16}
+                    color={dadosPerfil.rating ? "#ffc107" : "#ccc"}
+                  />
+                  <Text style={styles.reputacaoText}>
+                    Sua Reputação:{" "}
+                    {dadosPerfil.rating != null
+                      ? Number(dadosPerfil.rating).toFixed(1)
+                      : "Sem avaliação"}
+                  </Text>
+                </View>
+                <View style={{flexDirection: "row", alignItems: "center", gap: 10, marginTop: 5}}>
+                {dadosPerfil.verified && (
+                  <View style={{flexDirection: "row", gap: 4, backgroundColor: "#EAF3FF", padding: 6, alignItems: "center", borderRadius: 10, justifyContent: "center", margin: 3
+                  }}>
+                    <Text style={{color: "#2563eb", fontWeight: "bold",fontSize: 13}}>{dadosPerfil.activePlanName || "Verificado"}</Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={13}
+                      color="#2563eb"
+                    />
+                  </View>
+                )}
+                <View style={{ backgroundColor: "#000", padding: 6, borderRadius: 10, alignItems: "center", justifyContent: "center", margin: 3 }}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("Planos")}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                  >
+                    <Ionicons
+                      name="diamond"
+                      size={13}
+                      color="#fff"
+                    />
+                    <Text style={{color: "#fff", fontWeight: "bold", fontSize: 13}}>
+                      {dadosPerfil.verified ? "Gerenciar plano" : "Ver planos"}
+                    </Text>
+                    
+                  </TouchableOpacity>
+                </View>
+                </View>
               </View>
             )}
           </View>

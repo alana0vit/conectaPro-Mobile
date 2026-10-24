@@ -17,6 +17,7 @@ import FaleConosco from '../pages/FaleConosco/FaleConosco';
 import TermosDeUso from '../pages/TermosDeUso/TermosDeUso';
 import EsqueceuSenha from '../pages/EsqueceuSenha/EsqueceuSenha';
 import RedefinicaoSenha from '../pages/RedefinicaoSenha/RedefinicaoSenha';
+import Planos from '../pages/Planos/Planos';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -41,6 +42,7 @@ export default function AppNavigator() {
       <Stack.Screen name="TermosDeUso" component={TermosDeUso} />
       <Stack.Screen name="EsqueceuSenha" component={EsqueceuSenha} />
       <Stack.Screen name="RedefinicaoSenha" component={RedefinicaoSenha} />
+      <Stack.Screen name="Planos" component={Planos} />
     </Stack.Navigator>
   );
 }
