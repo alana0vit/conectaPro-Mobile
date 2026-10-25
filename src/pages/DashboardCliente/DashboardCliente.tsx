@@ -15,7 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { getUserId } from '../../services/auth';
+import { getUserId, logout } from '../../services/auth';
 
 const INTERVALO_REFRESH = 30_000;
 
@@ -195,6 +195,12 @@ export default function DashboardCliente() {
     return { text: s, style: {} };
   };
 
+  const handleLogout = async () => {
+    await logout();
+      Toast.show({ type: 'success', text1: 'Logout realizado' });
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+  };
+
   const DemandInfoBadges = ({ demanda }: { demanda: any }) => {
     const endereco = formatarEndereco(demanda?.addressId);
     return (
@@ -270,10 +276,16 @@ export default function DashboardCliente() {
             <Text style={styles.welcome}>Olá, <Text style={styles.name}>{userName || 'Cliente'}</Text></Text>
             <Text style={styles.sub}>Acompanhe o status e a execução dos seus serviços em tempo real.</Text>
           </View>
+          <View style={{ flexDirection: 'column', gap: 5 }}>
           <TouchableOpacity style={styles.btnEdit} onPress={() => navigation.navigate('EditarPerfil')}>
             <Ionicons name="person-circle-outline" size={18} color="#0066ff" />
             <Text style={styles.btnEditText}>Editar Meu Perfil</Text>
           </TouchableOpacity>
+           <TouchableOpacity style={styles.btnEdit} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+            <Text style={{ color: '#ef4444', fontWeight: '600' }}>Sair</Text>
+          </TouchableOpacity>
+          </View> 
         </View>
 
         <TouchableOpacity style={styles.btnNewService} onPress={() => navigation.navigate('ListaProf')}>

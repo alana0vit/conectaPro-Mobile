@@ -14,7 +14,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { getUserId } from '../../services/auth';
+import { getUserId, logout} from '../../services/auth';
 
 const INTERVALO_REFRESH = 30_000;
 
@@ -115,6 +115,12 @@ export default function DashboardProfissional() {
     if (abaAtiva === 'FINALIZADO') return s === 'FECHADO' || s === 'REJEITADO';
     return true;
   });
+
+  const handleLogout = async () => {
+    await logout();
+      Toast.show({ type: 'success', text1: 'Logout realizado' });
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+  };
 
   const contagem = (statusAlvo: string) =>
     pedidos.filter(p => {
@@ -247,10 +253,16 @@ export default function DashboardProfissional() {
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.btnAjustes} onPress={() => navigation.navigate('EditarPerfil')}>
+          <View style={{ flexDirection: 'column', gap: 5 }}>
+            <TouchableOpacity style={styles.btnAjustes} onPress={() => navigation.navigate('EditarPerfil')}>
             <Ionicons name="settings-outline" size={18} color="#3b82f6" />
             <Text style={styles.btnAjustesText}>Ajustes</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.btnAjustes}>
+            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+            <Text style={{ color: '#ef4444', fontWeight: '600' }}>Sair</Text>
+          </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.statsRow}>
