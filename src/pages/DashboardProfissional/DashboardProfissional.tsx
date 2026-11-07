@@ -111,6 +111,7 @@ export default function DashboardProfissional() {
     const matchesTexto = p.title?.toLowerCase().includes(buscaTexto.toLowerCase());
     if (!matchesTexto) return false;
     if (abaAtiva === 'NOVO') return s === 'ABERTO';
+    if (abaAtiva === 'PAGAMENTO') return s === 'AGUARDANDO_PAGAMENTO';
     if (abaAtiva === 'ANDAMENTO') return s === 'AGUARDANDO';
     if (abaAtiva === 'FINALIZADO') return s === 'FECHADO' || s === 'REJEITADO';
     return true;
@@ -127,6 +128,7 @@ export default function DashboardProfissional() {
       const s = String(p.demandStatus || '').toUpperCase();
       if (statusAlvo === 'ABERTO') return s === 'ABERTO';
       if (statusAlvo === 'AGUARDANDO') return s === 'AGUARDANDO';
+      if (statusAlvo === 'PAGAMENTO') return s === 'AGUARDANDO_PAGAMENTO';
       if (statusAlvo === 'FINALIZADO') return s === 'FECHADO' || s === 'REJEITADO';
       return false;
     }).length;
@@ -134,6 +136,7 @@ export default function DashboardProfissional() {
   const getStatusPill = (status: string) => {
     const s = String(status).toUpperCase();
     if (s === 'ABERTO') return { text: 'Novo', style: styles.pillNovo };
+    if (s === 'AGUARDANDO_PAGAMENTO') return { text: 'Aguardando Pagamento', style: styles.pillAndamento };
     if (s === 'AGUARDANDO') return { text: 'Em Andamento', style: styles.pillAndamento };
     if (s === 'FECHADO') return { text: 'Finalizado', style: styles.pillFinalizado };
     if (s === 'REJEITADO') return { text: 'Rejeitado', style: styles.pillRejeitado };
@@ -270,6 +273,10 @@ export default function DashboardProfissional() {
             <Text style={styles.statNumber}>{contagem('ABERTO')}</Text>
             <Text style={styles.statLabel}>Novas</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.statCard, abaAtiva === 'PAGAMENTO' && styles.statCardActive]} onPress={() => setAbaAtiva('PAGAMENTO')}>
+            <Text style={styles.statNumber}>{contagem('PAGAMENTO')}</Text>
+            <Text style={styles.statLabel}>Pagamento</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.statCard, abaAtiva === 'ANDAMENTO' && styles.statCardActive]} onPress={() => setAbaAtiva('ANDAMENTO')}>
             <Text style={styles.statNumber}>{contagem('AGUARDANDO')}</Text>
             <Text style={styles.statLabel}>Em Andamento</Text>
@@ -283,6 +290,9 @@ export default function DashboardProfissional() {
         <View style={styles.tabs}>
           <TouchableOpacity style={[styles.tab, abaAtiva === 'NOVO' && styles.tabActive]} onPress={() => setAbaAtiva('NOVO')}>
             <Text style={abaAtiva === 'NOVO' ? styles.tabTextActive : styles.tabText}>Novas ({contagem('ABERTO')})</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, abaAtiva === 'PAGAMENTO' && styles.tabActive]} onPress={() => setAbaAtiva('PAGAMENTO')}>
+            <Text style={abaAtiva === 'PAGAMENTO' ? styles.tabTextActive : styles.tabText}>Pagamento ({contagem('PAGAMENTO')})</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tab, abaAtiva === 'ANDAMENTO' && styles.tabActive]} onPress={() => setAbaAtiva('ANDAMENTO')}>
             <Text style={abaAtiva === 'ANDAMENTO' ? styles.tabTextActive : styles.tabText}>Em Andamento ({contagem('AGUARDANDO')})</Text>

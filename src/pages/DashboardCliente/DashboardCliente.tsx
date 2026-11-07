@@ -53,7 +53,7 @@ export default function DashboardCliente() {
   const [userName, setUserName] = useState('Cliente');
 
   const userIdRef = useRef<number | null>(null);
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null).;
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const buscarMeusPedidos = async (silencioso = false) => {
@@ -177,18 +177,21 @@ export default function DashboardCliente() {
     const matchesTexto = p.title?.toLowerCase().includes(buscaTexto.toLowerCase());
     if (!matchesTexto) return false;
     if (abaAtiva === 'PENDENTE') return status === 'ABERTO';
+    if (abaAtiva === 'PAGAMENTO') return status === 'AGUARDANDO_PAGAMENTO';
     if (abaAtiva === 'ANDAMENTO') return status === 'AGUARDANDO';
     if (abaAtiva === 'FINALIZADO') return status === 'FECHADO' || status === 'REJEITADO';
     return true;
   });
 
   const pendentes = pedidos.filter(p => String(p.demandStatus || '').toUpperCase() === 'ABERTO').length;
+  const aguardandoPagamento = pedidos.filter(p => String(p.demandStatus || '').toUpperCase() === 'AGUARDANDO_PAGAMENTO').length;
   const emAndamento = pedidos.filter(p => String(p.demandStatus || '').toUpperCase() === 'AGUARDANDO').length;
   const finalizados = pedidos.filter(p => { const s = String(p.demandStatus || '').toUpperCase(); return s === 'FECHADO' || s === 'REJEITADO'; }).length;
 
   const getStatusPill = (status: string) => {
     const s = String(status).toUpperCase();
     if (s === 'ABERTO') return { text: 'Aguardando Resposta', style: styles.pillAberto };
+    if (s === 'AGUARDANDO_PAGAMENTO') return { text: 'Pagamento Pendente', style: styles.pillAguardando };
     if (s === 'AGUARDANDO') return { text: 'Em Andamento', style: styles.pillAguardando };
     if (s === 'FECHADO') return { text: 'Concluída', style: styles.pillFechado };
     if (s === 'REJEITADO') return { text: 'Recusada', style: styles.pillRejeitado };
@@ -301,6 +304,13 @@ export default function DashboardCliente() {
               <Text style={styles.statusLabel}>Aguardando</Text>
             </View>
           </TouchableOpacity>
+          <TouchableOpacity style={[styles.statusCard, abaAtiva === 'PAGAMENTO' && styles.statusCardActive]} onPress={() => setAbaAtiva('PAGAMENTO')}>
+            <View style={styles.statusCardContent}>
+              <Ionicons name="cash-outline" size={18} color="#2e9140" />
+              <Text style={styles.statusNumber}>{aguardandoPagamento}</Text>
+              <Text style={styles.statusLabel}>Pagamento</Text>
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.statusCard, abaAtiva === 'ANDAMENTO' && styles.statusCardActive]} onPress={() => setAbaAtiva('ANDAMENTO')}>
             <View style={styles.statusCardContent}>
               <Ionicons name="play-circle-outline" size={18} color="#0066ff" />
@@ -320,6 +330,9 @@ export default function DashboardCliente() {
         <View style={styles.tabs}>
           <TouchableOpacity style={[styles.tab, abaAtiva === 'PENDENTE' && styles.tabActive]} onPress={() => setAbaAtiva('PENDENTE')}>
             <Text style={abaAtiva === 'PENDENTE' ? styles.tabTextActive : styles.tabText}>Pendentes ({pendentes})</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, abaAtiva === 'PAGAMENTO' && styles.tabActive]} onPress={() => setAbaAtiva('PAGAMENTO')}>
+            <Text style={abaAtiva === 'PAGAMENTO' ? styles.tabTextActive : styles.tabText}>Pagamento ({aguardandoPagamento})</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tab, abaAtiva === 'ANDAMENTO' && styles.tabActive]} onPress={() => setAbaAtiva('ANDAMENTO')}>
             <Text style={abaAtiva === 'ANDAMENTO' ? styles.tabTextActive : styles.tabText}>Em Andamento ({emAndamento})</Text>

@@ -67,6 +67,8 @@ export default function DetalhesDemanda() {
   const [imagensBase64, setImagensBase64] = useState<string[]>([]);
   const [carregandoImagens, setCarregandoImagens] = useState(false);
   const [imagemAmpliada, setImagemAmpliada] = useState<string | null>(null);
+  const [pagamento, setPagamento] = useState<any>(null);
+  const [processando, setProcessando] = useState(false);
 
   useEffect(() => {
     const raw = demanda?.imgUrl;
@@ -105,8 +107,12 @@ export default function DetalhesDemanda() {
 
   const processarAtualizacaoStatus = async (novoStatus: string) => {
     try {
-      await api.patch(`/api/demand/${demanda.id}/status`, { status: novoStatus });
-      if (novoStatus === 'AGUARDANDO') Toast.show({ type: 'success', text1: 'Serviço aceito! Dados de contato liberados.' });
+      if (novoStatus === 'AGUARDANDO') {
+        await api.patch(`/api/demand/${demanda.id}/accept`, {});
+      } else {
+        await api.patch(`/api/demand/${demanda.id}/status`, { status: novoStatus });
+      }
+      if (novoStatus === 'AGUARDANDO') Toast.show({ type: 'success', text1: 'Serviço aceito. O cliente foi encaminhado para o pagamento.' });
       else if (novoStatus === 'FECHADO') Toast.show({ type: 'info', text1: 'Serviço finalizado.' });
       else if (novoStatus === 'REJEITADO') Toast.show({ type: 'error', text1: 'Serviço recusado.' });
       navigation.goBack();
@@ -115,6 +121,54 @@ export default function DetalhesDemanda() {
       Toast.show({ type: 'error', text1: msgErro });
     }
   };
+
+  const responderPagamento = async (acao: 'aprovar' | 'recusar') => {
+  if (!pagamento) return;
+  try {
+    setProcessando(true);
+    await api.post(`/api/payments/${pagamento.id}/${acao}`);
+    setProcessando(false);
+    setPagamento(null);
+
+    if (acao === 'aprovar') {
+      Toast.show({
+        type: 'success',
+        text1: 'Pagamento aprovado! Dados de contato liberados.'
+      });
+      navigation.goBack();
+    } else {
+      Toast.show({
+        type: 'info',
+        text1: 'Pagamento recusado.'
+      });
+    }
+  } catch (error: any) {
+    setProcessando(false);
+    Toast.show({
+      type: 'error',
+      text1: (
+        'Não foi possível concluir o pagamento.'
+      )
+    });
+  }
+};
+const iniciarPagamento = async () => {
+  try {
+    const res = await api.post(`/api/payments/demand/${demanda.id}/checkout`);
+    const payment = res.data?.payment;
+    if (!payment?.id) {
+      throw new Error('Checkout não retornado.');
+    }
+    setPagamento(payment);
+  } catch (error: any) {
+    Toast.show({
+      type: 'error',
+      text1: (
+        'Não foi possível iniciar o pagamento.'
+      )
+    });
+  }
+};
 
   const solicitarConfirmacao = (novoStatus: string, acaoTexto: string) => {
     setConfirmacao({ visivel: true, novoStatus, tituloAcao: acaoTexto });
@@ -216,6 +270,24 @@ export default function DetalhesDemanda() {
           <DetalhesSolicitacao demanda={demanda} modo={modo} />
         )}
 
+        {String(demanda.demandStatus).toUpperCase() === 'AGUARDANDO_PAGAMENTO' && isCliente && (
+          <View style={styles.paymentBox}>
+            <Text style={styles.paymentTitle}>Pagamento necessário</Text>
+            <Text style={styles.paymentText}>
+              O profissional aceitou a solicitação e definiu o valor final.
+            </Text>
+            <Text style={styles.paymentText}>
+              Valor: <Text style={styles.paymentValor}>
+                {formatarMoeda(demanda.finalValue)}
+              </Text>
+            </Text>
+            <TouchableOpacity style={styles.btnPagar} onPress={iniciarPagamento}>
+              <Ionicons name="card-outline" size={18} color="#fff" />
+              <Text style={styles.btnText}>Ir para pagamento</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.actionsContainer}>
           {isCliente && String(demanda.demandStatus).toUpperCase() === 'ABERTO' && (
             <TouchableOpacity
@@ -299,6 +371,51 @@ export default function DetalhesDemanda() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+  visible={!!pagamento}
+  transparent
+  animationType="fade"
+  onRequestClose={() => !processando && setPagamento(null)}
+>
+  <View style={styles.overlay}>
+    <View style={styles.box}>
+      <Text style={styles.badge}>
+        MODO SIMULADO — nenhum dinheiro real será cobrado
+      </Text>
+
+      <Text style={styles.title}>Confirmar pagamento</Text>
+
+      <Text style={styles.plano}>Pagamento do serviço</Text>
+
+      <Text style={styles.valor}>
+        {formatarMoeda(pagamento?.amount ?? demanda.finalValue)}
+      </Text>
+
+      <Text style={styles.pergunta}>
+        Deseja aprovar o pagamento deste serviço?
+      </Text>
+
+      <TouchableOpacity
+        style={[styles.botao, styles.aprovar]}
+        disabled={processando}
+        onPress={() => responderPagamento('aprovar')}
+      >
+        <Text style={styles.botaoTexto}>
+          {processando ? 'Processando...' : 'Aprovar pagamento'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.botao, styles.recusar]}
+        disabled={processando}
+        onPress={() => responderPagamento('recusar')}
+      >
+        <Text style={styles.botaoTexto}>Recusar pagamento</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
@@ -377,7 +494,6 @@ const styles = StyleSheet.create({
   btnAccept: { backgroundColor: '#10b981' },
   btnDecline: { backgroundColor: '#ef4444' },
   btnFinish: { backgroundColor: '#3b82f6', marginTop: 8 },
-
   modalOverlay: { flex: 1, backgroundColor: 'rgba(26,32,44,0.4)', justifyContent: 'center', padding: 20 },
   confirmModal: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', marginHorizontal: 20 },
   confirmTitle: { fontSize: 18, fontWeight: '700', color: '#1a202c', marginBottom: 10 },
@@ -387,4 +503,23 @@ const styles = StyleSheet.create({
   btnCancelText: { fontWeight: '600', color: '#475569' },
   btnConfirm: { flex: 1, backgroundColor: '#0066ff', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   btnConfirmText: { fontWeight: '700', color: '#fff' },
+  paymentBox: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 12, padding: 16, marginBottom: 15, gap: 6 },
+  paymentTitle: { fontSize: 17, fontWeight: '700', color: '#92400e' },
+  paymentText: { fontSize: 13, color: '#92400e', lineHeight: 19 },
+  paymentValor: { fontWeight: '800' },
+  btnPagar: { backgroundColor: '#0066ff', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 14, borderRadius: 8, gap: 8, marginTop: 8 },
+  paymentSimulado: { fontSize: 12, color: '#92400e', backgroundColor: '#fef3c7', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, textAlign: 'center', marginBottom: 8 },
+  paymentValorModal: { fontSize: 30, fontWeight: '800', color: '#1a202c', marginBottom: 8 },
+  inputValor: { width: '100%', borderWidth: 1, borderColor: '#cbd5e0', borderRadius: 10, padding: 12, fontSize: 16, marginBottom: 20, color: '#1a202c' },
+  overlay: {flex: 1,backgroundColor: 'rgba(0,0,0,0.5)',justifyContent: 'center',alignItems: 'center',padding: 20},
+  box: {width: '100%',backgroundColor: '#fff',borderRadius: 10,padding: 20,alignItems: 'center',gap: 8},
+  badge: {backgroundColor: '#fef3c7',color: '#92400e',paddingVertical: 4,paddingHorizontal: 10,borderRadius: 6,fontSize: 12,textAlign: 'center'},
+  title: {fontSize: 20,fontWeight: 'bold',marginTop: 6},
+  plano: {fontSize: 16,color: '#6b7280'},
+  valor: {fontSize: 32,fontWeight: 'bold',marginVertical: 6},
+  pergunta: {fontSize: 14,color: '#6b7280',marginBottom: 6},
+  botao: {width: '100%',paddingVertical: 12,borderRadius: 8,alignItems: 'center'},
+  aprovar: {backgroundColor: '#16a34a'},
+  recusar: {backgroundColor: '#dc2626'},
+  botaoTexto: {color: '#fff',fontWeight: 'bold',fontSize: 16},
 });
