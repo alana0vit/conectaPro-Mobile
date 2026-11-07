@@ -53,7 +53,7 @@ export default function DashboardCliente() {
   const [userName, setUserName] = useState('Cliente');
 
   const userIdRef = useRef<number | null>(null);
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null).;
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const buscarMeusPedidos = async (silencioso = false) => {
