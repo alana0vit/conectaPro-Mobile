@@ -14,7 +14,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-import { getUserId } from '../../services/auth';
+import { getUserId, logout} from '../../services/auth';
 
 const INTERVALO_REFRESH = 30_000;
 
@@ -111,16 +111,24 @@ export default function DashboardProfissional() {
     const matchesTexto = p.title?.toLowerCase().includes(buscaTexto.toLowerCase());
     if (!matchesTexto) return false;
     if (abaAtiva === 'NOVO') return s === 'ABERTO';
+    if (abaAtiva === 'PAGAMENTO') return s === 'AGUARDANDO_PAGAMENTO';
     if (abaAtiva === 'ANDAMENTO') return s === 'AGUARDANDO';
     if (abaAtiva === 'FINALIZADO') return s === 'FECHADO' || s === 'REJEITADO';
     return true;
   });
+
+  const handleLogout = async () => {
+    await logout();
+      Toast.show({ type: 'success', text1: 'Logout realizado' });
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+  };
 
   const contagem = (statusAlvo: string) =>
     pedidos.filter(p => {
       const s = String(p.demandStatus || '').toUpperCase();
       if (statusAlvo === 'ABERTO') return s === 'ABERTO';
       if (statusAlvo === 'AGUARDANDO') return s === 'AGUARDANDO';
+      if (statusAlvo === 'PAGAMENTO') return s === 'AGUARDANDO_PAGAMENTO';
       if (statusAlvo === 'FINALIZADO') return s === 'FECHADO' || s === 'REJEITADO';
       return false;
     }).length;
@@ -128,6 +136,7 @@ export default function DashboardProfissional() {
   const getStatusPill = (status: string) => {
     const s = String(status).toUpperCase();
     if (s === 'ABERTO') return { text: 'Novo', style: styles.pillNovo };
+    if (s === 'AGUARDANDO_PAGAMENTO') return { text: 'Aguardando Pagamento', style: styles.pillAndamento };
     if (s === 'AGUARDANDO') return { text: 'Em Andamento', style: styles.pillAndamento };
     if (s === 'FECHADO') return { text: 'Finalizado', style: styles.pillFinalizado };
     if (s === 'REJEITADO') return { text: 'Rejeitado', style: styles.pillRejeitado };
@@ -201,22 +210,72 @@ export default function DashboardProfissional() {
             <Text style={styles.welcome}>Painel de Controle</Text>
             <Text style={styles.sub}>Olá, <Text style={styles.name}>{userName || 'Profissional'}</Text>. Veja como está sua agenda.</Text>
             {dadosPerfil && (
-              <View style={styles.reputacaoContainer}>
-                <Ionicons name="star" size={16} color={dadosPerfil.rating ? '#ffc107' : '#ccc'} />
-                <Text style={styles.reputacaoText}>Sua Reputação: {dadosPerfil.rating != null ? Number(dadosPerfil.rating).toFixed(1) : 'Sem avaliação'}</Text>
+              <View>
+                <View style={styles.reputacaoContainer}>
+                  <Ionicons
+                    name="star"
+                    size={16}
+                    color={dadosPerfil.rating ? "#ffc107" : "#ccc"}
+                  />
+                  <Text style={styles.reputacaoText}>
+                    Sua Reputação:{" "}
+                    {dadosPerfil.rating != null
+                      ? Number(dadosPerfil.rating).toFixed(1)
+                      : "Sem avaliação"}
+                  </Text>
+                </View>
+                <View style={{flexDirection: "row", alignItems: "center", gap: 10, marginTop: 5}}>
+                {dadosPerfil.verified && (
+                  <View style={{flexDirection: "row", gap: 4, backgroundColor: "#EAF3FF", padding: 6, alignItems: "center", borderRadius: 10, justifyContent: "center", margin: 3
+                  }}>
+                    <Text style={{color: "#2563eb", fontWeight: "bold",fontSize: 13}}>{dadosPerfil.activePlanName || "Verificado"}</Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={13}
+                      color="#2563eb"
+                    />
+                  </View>
+                )}
+                <View style={{ backgroundColor: "#000", padding: 6, borderRadius: 10, alignItems: "center", justifyContent: "center", margin: 3 }}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("Planos")}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                  >
+                    <Ionicons
+                      name="diamond"
+                      size={13}
+                      color="#fff"
+                    />
+                    <Text style={{color: "#fff", fontWeight: "bold", fontSize: 13}}>
+                      {dadosPerfil.verified ? "Gerenciar plano" : "Ver planos"}
+                    </Text>
+                    
+                  </TouchableOpacity>
+                </View>
+                </View>
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.btnAjustes} onPress={() => navigation.navigate('EditarPerfil')}>
+          <View style={{ flexDirection: 'column', gap: 5 }}>
+            <TouchableOpacity style={styles.btnAjustes} onPress={() => navigation.navigate('EditarPerfil')}>
             <Ionicons name="settings-outline" size={18} color="#3b82f6" />
             <Text style={styles.btnAjustesText}>Ajustes</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.btnAjustes}>
+            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+            <Text style={{ color: '#ef4444', fontWeight: '600' }}>Sair</Text>
+          </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.statsRow}>
           <TouchableOpacity style={[styles.statCard, abaAtiva === 'NOVO' && styles.statCardActive]} onPress={() => setAbaAtiva('NOVO')}>
             <Text style={styles.statNumber}>{contagem('ABERTO')}</Text>
             <Text style={styles.statLabel}>Novas</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.statCard, abaAtiva === 'PAGAMENTO' && styles.statCardActive]} onPress={() => setAbaAtiva('PAGAMENTO')}>
+            <Text style={styles.statNumber}>{contagem('PAGAMENTO')}</Text>
+            <Text style={styles.statLabel}>Pagamento</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.statCard, abaAtiva === 'ANDAMENTO' && styles.statCardActive]} onPress={() => setAbaAtiva('ANDAMENTO')}>
             <Text style={styles.statNumber}>{contagem('AGUARDANDO')}</Text>
@@ -231,6 +290,9 @@ export default function DashboardProfissional() {
         <View style={styles.tabs}>
           <TouchableOpacity style={[styles.tab, abaAtiva === 'NOVO' && styles.tabActive]} onPress={() => setAbaAtiva('NOVO')}>
             <Text style={abaAtiva === 'NOVO' ? styles.tabTextActive : styles.tabText}>Novas ({contagem('ABERTO')})</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, abaAtiva === 'PAGAMENTO' && styles.tabActive]} onPress={() => setAbaAtiva('PAGAMENTO')}>
+            <Text style={abaAtiva === 'PAGAMENTO' ? styles.tabTextActive : styles.tabText}>Pagamento ({contagem('PAGAMENTO')})</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tab, abaAtiva === 'ANDAMENTO' && styles.tabActive]} onPress={() => setAbaAtiva('ANDAMENTO')}>
             <Text style={abaAtiva === 'ANDAMENTO' ? styles.tabTextActive : styles.tabText}>Em Andamento ({contagem('AGUARDANDO')})</Text>
