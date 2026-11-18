@@ -1,3 +1,4 @@
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -12,17 +13,12 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
-
-type ListaProfRouteParams = {
-  reassignDemandId?: number;
-};
 
 const INTERVALO_REFRESH = 30_000;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -49,15 +45,23 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
 
 export default function ListaProf() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const route = useRoute();
-  const params = route.params as ListaProfRouteParams | undefined;
-  const reassignDemandId = params?.reassignDemandId ?? null;
+  const route = useRoute<RouteProp<RootStackParamList, 'ListaProf'>>();
+  const reassignDemandId = route.params?.reassignDemandId ?? null;
+  const initialCategoryId = route.params?.categoryId ?? '';
   const isReassign = reassignDemandId != null;
 
   const [profissionais, setProfissionais] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('');
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>(initialCategoryId);
+
+  // Se o chat navegar para ListaProf já estando nesta tela,
+  // os params mudam sem re-montar o componente — sincronizamos manualmente.
+  useEffect(() => {
+    if (initialCategoryId) {
+      setCategoriaSelecionada(initialCategoryId);
+    }
+  }, [initialCategoryId]);
   const [filtroEstrelas, setFiltroEstrelas] = useState('TODOS');
   const [raioKm, setRaioKm] = useState(20);
   const [usandoLocalizacao, setUsandoLocalizacao] = useState(false);
