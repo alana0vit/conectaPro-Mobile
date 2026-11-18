@@ -14,7 +14,9 @@ export type RootStackParamList = {
   RedefinicaoSenha: { token: string };
   FaleConosco: undefined;
   FAQ: undefined;
-  ListaProf: undefined;
+  ListaProf:
+  | { categoryId?: string; reassignDemandId?: number }
+  | undefined;
   PerfilCliente: undefined;
   PerfilProfissional: { id: number };
   SolicServico: { profissionalId: number };
