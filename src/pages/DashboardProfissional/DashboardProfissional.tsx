@@ -45,7 +45,6 @@ export default function DashboardProfissional() {
   const [buscaTexto, setBuscaTexto] = useState('');
   const [dadosPerfil, setDadosPerfil] = useState<any>(null);
   const [userName, setUserName] = useState('Profissional');
-
   const userIdRef = useRef<number | null>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);

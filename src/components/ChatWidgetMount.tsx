@@ -9,6 +9,7 @@ const HIDDEN_ROUTES = new Set([
   'Cadastro',
   'EsqueceuSenha',
   'RedefinicaoSenha',
+  'MapaProf',
 ]);
 
 type Props = { routeName?: string };

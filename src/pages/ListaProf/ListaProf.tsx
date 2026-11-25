@@ -339,6 +339,15 @@ export default function ListaProf() {
                     {usandoLocalizacao ? 'GPS ativo' : 'Perto de mim'}
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btnLocalizacao, usandoLocalizacao && styles.btnLocalizacaoAtivo]}
+                  onPress={() => navigation.navigate('MapaProf')}
+                >
+                  <Ionicons name="map" size={14} color="#fff" />
+                  <Text style={styles.btnLocalizacaoText}>
+                    Mapa de profissionais
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>

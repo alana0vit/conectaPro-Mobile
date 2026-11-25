@@ -22,4 +22,5 @@ export type RootStackParamList = {
   SolicServico: { profissionalId: number };
   TermosDeUso: undefined;
   Planos: undefined;
+  MapaProf: undefined;
 };
